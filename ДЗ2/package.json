@@ -1,0 +1,10 @@
+{
+  "name": "habit-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Трекер привычек — учебный сквозной проект",
+  "scripts": {
+    "test": "node --test"
+  }
+}
