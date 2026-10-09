@@ -9,12 +9,33 @@ const TABS = [
   { id: 'profile', label: 'Профиль' },
 ];
 
+/** Допустимые идентификаторы вкладок — для проверки глубокой ссылки. */
+const TAB_IDS = new Set(TABS.map((t) => t.id));
+
+/**
+ * Начальная вкладка из хэша URL (#today/#stats/#profile).
+ * Глубокие ссылки нужны для скриншотного тестирования экранов и удобства
+ * шаринга состояния; некорректный хэш молча падает на «Сегодня».
+ *
+ * @returns {string} идентификатор вкладки.
+ */
+function initialTab() {
+  const hash = window.location.hash.replace('#', '');
+  return TAB_IDS.has(hash) ? hash : 'today';
+}
+
 /**
  * Корневой компонент приложения «Трекер привычек».
  * Навигация — нижние вкладки (Концепция 1: Сегодня / Статистика / Профиль).
  */
 export default function App() {
-  const [tab, setTab] = useState('today');
+  const [tab, setTab] = useState(initialTab);
+
+  /** Переключает вкладку и синхронизирует хэш URL (глубокая ссылка). */
+  const switchTab = (id) => {
+    setTab(id);
+    window.history.replaceState(null, '', `#${id}`);
+  };
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-paper text-ink">
@@ -30,7 +51,7 @@ export default function App() {
             <button
               key={t.id}
               type="button"
-              onClick={() => setTab(t.id)}
+              onClick={() => switchTab(t.id)}
               aria-current={tab === t.id ? 'page' : undefined}
               className={
                 'flex-1 py-3 text-sm transition-colors ' +

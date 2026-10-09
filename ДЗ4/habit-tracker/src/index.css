@@ -15,6 +15,7 @@
   --color-sage-deep: #58755F;  /* тёмный шалфей (hover/active) */
   --color-sage-mist: #E9F0E8;  /* мягкая подложка акцента */
   --color-bar-off: #E7E1D2;    /* «пустые» столбики/точки */
+  --color-terracotta: #B45B4A; /* терракотовый акцент ошибок валидации (ТЗ ДЗ3, FR-8) */
 
   --font-display: Georgia, "Times New Roman", serif;
 }
