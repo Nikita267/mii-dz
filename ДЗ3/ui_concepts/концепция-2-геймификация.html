@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Трекер привычек — Концепция №2 «Яркая геймификация»</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%A5%3C/text%3E%3C/svg%3E">
+<style>
+/* ============ ТОКЕНЫ ============ */
+:root{
+  --bg:#0A0512;
+  --ink:#F7F1FF;
+  --mut:#B9A6DE;
+  --faint:#8270AD;
+  --coral:#FF6B6B;
+  --coral2:#FF9E5E;
+  --amd:#A855F7;
+  --amd2:#C77DFF;
+  --lilac:#D8B4FE;
+  --gold:#FFD166;
+  --line:rgba(255,255,255,.08);
+  --f-ui:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,"SF Pro Text",Roboto,Arial,sans-serif;
+  --f-hud:ui-monospace,"Cascadia Mono",Consolas,"SF Mono",Menlo,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{color-scheme:dark;scroll-behavior:smooth}
+body{
+  font-family:var(--f-ui);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  background:
+    radial-gradient(1000px 520px at 50% -120px, rgba(124,58,237,.18), transparent 60%),
+    radial-gradient(760px 420px at 88% 24%, rgba(255,107,107,.07), transparent 55%),
+    radial-gradient(700px 500px at 6% 66%, rgba(199,125,255,.06), transparent 55%),
+    var(--bg);
+}
+:focus-visible{outline:2px solid var(--lilac);outline-offset:2px;border-radius:6px}
+.hud{font-family:var(--f-hud);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:600}
+
+/* ============ СТРАНИЦА-ПОДЛОЖКА ============ */
+.page-head{max-width:680px;margin:0 auto;padding:48px 18px 6px;text-align:center}
+.page-head .eyebrow{margin-bottom:14px}
+.page-head h1{
+  font-size:clamp(30px,7vw,44px);font-weight:800;letter-spacing:-.03em;line-height:1.05;
+  background:linear-gradient(95deg,#FFB35C 0%,var(--coral) 38%,var(--amd2) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.page-head .tag{color:var(--mut);font-size:15px;line-height:1.65;margin:14px auto 20px;max-width:520px}
+.mchips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.mchip{font-family:var(--f-hud);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--lilac);
+  padding:6px 12px;border:1px solid rgba(216,180,254,.28);border-radius:999px;background:rgba(168,85,247,.09)}
+.scr-block{max-width:520px;margin:0 auto 58px;padding:0 14px}
+.scr-label{display:flex;align-items:center;gap:12px;margin-top:52px}
+.scr-label .n{font-family:var(--f-hud);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+  background:linear-gradient(90deg,var(--coral2),var(--amd2));-webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap}
+.scr-label .t{font-size:13px;font-weight:700;color:var(--mut);white-space:nowrap}
+.scr-label::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(216,180,254,.32),transparent)}
+.scr-note{font-size:12px;line-height:1.55;color:var(--faint);margin:9px 0 0;max-width:420px}
+.page-foot{max-width:560px;margin:0 auto;padding:10px 20px 70px;text-align:center;color:var(--faint);font-size:12px;line-height:1.7}
+.page-foot b{color:var(--mut);font-weight:600}
+
+/* ============ ТЕЛЕФОН ============ */
+.phone{
+  position:relative;width:min(390px,100%);margin:26px auto 0;border-radius:40px;padding:2px;
+  background:linear-gradient(160deg,rgba(216,180,254,.38),rgba(168,85,247,.12) 42%,rgba(255,107,107,.28));
+  box-shadow:0 34px 90px -24px rgba(0,0,0,.85), 0 0 110px -36px rgba(150,80,255,.55);
+}
+.shell{
+  border-radius:38px;overflow:hidden;min-height:620px;display:flex;flex-direction:column;position:relative;
+  background:radial-gradient(130% 90% at 50% -4%, #32126E 0%, #1E0C3E 46%, #150829 100%);
+}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:13px 24px 7px;
+  color:var(--mut);font-size:12.5px;font-weight:600}
+.sbar .r{display:flex;align-items:center;gap:8px}
+.sig{display:inline-flex;align-items:flex-end;gap:2px}
+.sig i{width:3px;border-radius:1px;background:rgba(226,214,255,.75)}
+.sig i:nth-child(1){height:4px}.sig i:nth-child(2){height:6px}.sig i:nth-child(3){height:8px}.sig i:nth-child(4){height:10px;background:rgba(226,214,255,.3)}
+.batt{width:23px;height:12px;border:1.5px solid rgba(226,214,255,.55);border-radius:3.5px;position:relative;display:inline-block}
+.batt::after{content:"";position:absolute;right:-4.5px;top:2.5px;width:2px;height:4px;background:rgba(226,214,255,.55);border-radius:1px}
+.batt b{position:absolute;top:1.5px;left:1.5px;bottom:1.5px;width:68%;background:var(--lilac);border-radius:1.5px}
+
+/* ============ ОБЩЕЕ ВНУТРИ АППА ============ */
+.ahead{display:flex;align-items:center;gap:12px;padding:10px 18px 14px}
+.ava{width:44px;height:44px;border-radius:15px;flex:none;display:grid;place-items:center;font-weight:800;font-size:15px;color:#fff;
+  background:linear-gradient(135deg,var(--coral),var(--amd2));box-shadow:0 8px 20px -7px rgba(255,107,107,.65)}
+.ahead .who{min-width:0}
+.ahead h1,.ahead .ttl{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-top:2px}
+.lvl{margin-left:auto;text-align:right;flex:none}
+.lvl .hud{margin-bottom:5px}
+.xp{width:88px;height:6px;border-radius:3px;background:rgba(255,255,255,.09);overflow:hidden;margin-left:auto}
+.xp i{display:block;height:100%;width:84%;border-radius:3px;background:linear-gradient(90deg,var(--coral2),var(--coral) 55%,var(--amd2));
+  box-shadow:0 0 8px rgba(255,120,80,.6);transition:width .8s cubic-bezier(.22,.9,.3,1)}
+.lvl-n{font-family:var(--f-hud);font-size:9px;letter-spacing:.06em;color:var(--faint);margin-top:4px}
+.iconbtn{width:36px;height:36px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.05);
+  color:var(--mut);display:grid;place-items:center;font-size:16px;cursor:pointer;transition:.2s}
+.iconbtn:hover{background:rgba(255,255,255,.1);color:#fff}
+.tabbar{margin-top:auto;display:flex;gap:4px;padding:8px 10px 12px;border-top:1px solid rgba(255,255,255,.07);
+  background:rgba(15,6,30,.78);backdrop-filter:blur(10px)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0;border-radius:14px;
+  font-size:10px;font-weight:600;color:var(--faint);text-decoration:none;transition:.2s;cursor:pointer}
+.tab .ti{font-size:19px;filter:grayscale(.75) opacity(.65);transition:.2s;line-height:1}
+.tab:hover{color:var(--mut)}
+.tab.on{color:#fff;background:linear-gradient(135deg,rgba(255,107,107,.18),rgba(168,85,247,.2));
+  box-shadow:inset 0 0 0 1px rgba(216,180,254,.28)}
+.tab.on .ti{filter:none;transform:scale(1.1)}
+
+/* ============ ЭКРАН 1 · СЕГОДНЯ ============ */
+.hero{
+  margin:2px 16px 16px;padding:18px 18px 16px;border-radius:26px;display:flex;gap:16px;align-items:center;
+  background:linear-gradient(145deg, rgba(168,85,247,.24), rgba(255,107,107,.10) 58%, rgba(255,209,102,.07));
+  border:1px solid rgba(216,180,254,.17);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 20px 46px -20px rgba(124,58,237,.6);
+}
+.ring{position:relative;width:150px;height:150px;flex:none}
+.ring svg{width:100%;height:100%;display:block}
+.ring-bg{fill:none;stroke:rgba(255,255,255,.09);stroke-width:12}
+.ring-fg{fill:none;stroke:url(#rg);stroke-width:12;stroke-linecap:round;transform:rotate(-90deg);transform-origin:center;
+  stroke-dasharray:402.12;stroke-dashoffset:201.06;
+  filter:drop-shadow(0 0 9px rgba(255,120,90,.6));
+  animation:ringIn 1.15s cubic-bezier(.25,.8,.3,1) .25s both;
+  transition:stroke-dashoffset .85s cubic-bezier(.22,.9,.3,1)}
+@keyframes ringIn{from{stroke-dashoffset:402.12}to{stroke-dashoffset:201.06}}
+.ring-c{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:3px;text-align:center}
+.ring-num{font-size:15px;color:var(--mut);font-variant-numeric:tabular-nums}
+.ring-num b{font-size:40px;font-weight:800;letter-spacing:-.04em;color:#fff}
+.ring-sub{font-family:var(--f-hud);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.hero-col{display:flex;flex-direction:column;gap:9px;min-width:0}
+.hero-col>.hud{margin-bottom:1px}
+.chip{display:inline-flex;align-items:center;gap:7px;width:fit-content;max-width:100%;padding:8px 12px;border-radius:999px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);
+  font-size:12.5px;font-weight:600;color:var(--ink);transition:.25s;cursor:default}
+.chip:hover{transform:translateY(-1px);background:rgba(255,255,255,.09)}
+.chip.fire{border-color:rgba(255,140,95,.42);box-shadow:0 0 18px -6px rgba(255,107,107,.6)}
+.chip.bigt b{font-size:15px;font-weight:800}
+.secrow{display:flex;align-items:baseline;justify-content:space-between;padding:2px 20px 10px}
+.secrow h2{font-size:15px;font-weight:800;letter-spacing:-.01em}
+.count{font-family:var(--f-hud);font-size:10.5px;letter-spacing:.08em;color:var(--mut);font-variant-numeric:tabular-nums}
+.ribbon{display:flex;gap:10px;overflow-x:auto;padding:4px 18px 12px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.ribbon::-webkit-scrollbar{display:none}
+.card{
+  position:relative;flex:0 0 137px;scroll-snap-align:start;border-radius:22px;padding:12px 12px 11px;
+  background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018));
+  border:1px solid rgba(255,255,255,.09);
+  transition:transform .25s,border-color .25s,box-shadow .25s,background .25s;
+  animation:cardIn .5s ease-out both;
+}
+.card:nth-child(1){animation-delay:.05s}.card:nth-child(2){animation-delay:.1s}.card:nth-child(3){animation-delay:.15s}
+.card:nth-child(4){animation-delay:.2s}.card:nth-child(5){animation-delay:.25s}.card:nth-child(6){animation-delay:.3s}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.card:hover{transform:translateY(-3px);border-color:rgba(216,180,254,.35);box-shadow:0 16px 32px -14px rgba(150,80,255,.55)}
+.card input{position:absolute;top:0;left:0;width:1px;height:1px;opacity:0}
+.card label{display:flex;flex-direction:column;gap:7px;cursor:pointer;height:100%}
+.tile{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;font-size:24px;line-height:1;
+  background:var(--tg);box-shadow:inset 0 1px 0 rgba(255,255,255,.28), 0 7px 16px -7px rgba(0,0,0,.55);transition:.25s}
+.card h4{font-size:13.5px;font-weight:700;letter-spacing:-.01em}
+.card .meta{font-size:11px;color:var(--mut);line-height:1.35;margin-top:-4px}
+.wk{display:flex;justify-content:space-between;list-style:none}
+.wk li{display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--f-hud);font-size:7.5px;color:var(--faint)}
+.wk i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.13)}
+.wk li.on i{background:linear-gradient(135deg,var(--coral2),var(--coral));box-shadow:0 0 6px rgba(255,120,90,.65)}
+.wk li.today i{outline:1.5px solid rgba(216,180,254,.75);outline-offset:1.5px}
+.wk li.nx i{background:transparent;border:1px dashed rgba(255,255,255,.2)}
+.strk{display:flex;align-items:baseline;gap:6px}
+.strk .s{font-size:16px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.strk .s small{font-size:10px;font-weight:600;color:var(--faint)}
+.strk .brk{font-size:11px;font-weight:600;color:var(--faint)}
+.check{margin-top:auto;align-self:flex-end;width:35px;height:35px;border-radius:12px;display:grid;place-items:center;
+  border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.03);color:transparent;
+  font-size:16px;font-weight:900;transition:.25s}
+.check::after{content:"✓"}
+.card:has(input:checked){
+  border-color:rgba(255,140,100,.5);
+  background:linear-gradient(180deg,rgba(255,107,107,.14),rgba(168,85,247,.10));
+  box-shadow:0 0 26px -8px rgba(255,107,107,.5);
+}
+.card:has(input:checked) .tile{transform:scale(1.05)}
+.card:has(input:checked) .check{
+  background:linear-gradient(135deg,var(--coral2),var(--coral));border-color:transparent;color:#fff;
+  box-shadow:0 7px 16px -5px rgba(255,107,107,.75);
+}
+.card:has(input:checked) .check::after{animation:pop .32s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{0%{transform:scale(.3)}60%{transform:scale(1.22)}100%{transform:scale(1)}}
+.card:has(input:focus-visible){outline:2px solid var(--lilac);outline-offset:2px}
+.card.record{border-color:rgba(255,209,102,.5)}
+.badge{position:absolute;top:-9px;right:10px;padding:3px 9px;border-radius:999px;
+  background:linear-gradient(90deg,var(--gold),var(--coral2));color:#3A1D00;
+  font-family:var(--f-hud);font-size:8.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  box-shadow:0 5px 14px -4px rgba(255,180,80,.65)}
+.party{display:none;margin:0 16px 12px;padding:13px 15px;border-radius:20px;align-items:center;gap:11px;
+  background:linear-gradient(120deg,rgba(255,209,102,.17),rgba(255,107,107,.15));
+  border:1px solid rgba(255,209,102,.42);box-shadow:0 0 32px -8px rgba(255,180,80,.45)}
+.party .pe{font-size:25px;line-height:1}
+.party b{display:block;font-size:14px;font-weight:800;margin-bottom:2px}
+.party p{font-size:11.5px;color:var(--mut);line-height:1.45}
+
+/* состояние «всё отмечено» */
+.full{display:none}
+.ph-today:has(#t-water:checked):has(#t-run:checked):has(#t-read:checked):has(#t-medit:checked):has(#t-dinner:checked):has(#t-lang:checked) .ring-fg{stroke-dashoffset:0;animation:none}
+.ph-today:has(#t-water:checked):has(#t-run:checked):has(#t-read:checked):has(#t-medit:checked):has(#t-dinner:checked):has(#t-lang:checked) .half{display:none}
+.ph-today:has(#t-water:checked):has(#t-run:checked):has(#t-read:checked):has(#t-medit:checked):has(#t-dinner:checked):has(#t-lang:checked) .full{display:inline}
+.ph-today:has(#t-water:checked):has(#t-run:checked):has(#t-read:checked):has(#t-medit:checked):has(#t-dinner:checked):has(#t-lang:checked) .party{display:flex;animation:pop .45s cubic-bezier(.2,1.5,.4,1)}
+.ph-today:has(#t-water:checked):has(#t-run:checked):has(#t-read:checked):has(#t-medit:checked):has(#t-dinner:checked):has(#t-lang:checked) .xp i{width:89%}
+.pe.wig{animation:wig 2.4s ease-in-out infinite}
+@keyframes wig{0%,100%{transform:rotate(-8deg) scale(1)}50%{transform:rotate(8deg) scale(1.12)}}
+
+/* ============ ЭКРАН 2 · СТАТИСТИКА ============ */
+.mpick{margin-left:auto;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;
+  background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:12px;font-weight:600;color:var(--mut);cursor:pointer;transition:.2s}
+.mpick:hover{color:#fff;border-color:rgba(216,180,254,.35)}
+.podium{display:flex;align-items:flex-end;gap:8px;padding:4px 18px 6px}
+.pod{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;padding:12px 4px 11px;
+  border-radius:18px;background:rgba(255,255,255,.045);border:1px solid var(--line);transition:.25s}
+.pod:hover{transform:translateY(-3px);border-color:rgba(216,180,254,.3)}
+.pod .med{font-size:20px;line-height:1}
+.pod .nm{display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--mut)}
+.pod b{font-size:24px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.pod b small{font-size:10px;font-weight:600;color:var(--faint)}
+.pod.p1{padding:16px 4px 15px;
+  background:linear-gradient(180deg,rgba(255,209,102,.16),rgba(255,158,94,.05));border-color:rgba(255,209,102,.42);
+  box-shadow:0 0 28px -8px rgba(255,190,90,.5)}
+.pod.p1 b{font-size:31px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:8px 18px 2px}
+.tile2{border-radius:19px;background:rgba(255,255,255,.045);border:1px solid var(--line);padding:13px;transition:.25s}
+.tile2:hover{border-color:rgba(216,180,254,.28)}
+.tile2 .hud{display:block;margin-bottom:8px}
+.tile2 .v{font-size:26px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.tile2 .v em{font-style:normal;font-size:13px;font-weight:600;color:var(--mut);margin-left:3px}
+.tile2 .sub{font-size:10.5px;color:var(--faint);margin-top:2px}
+.bars{display:flex;gap:5px;align-items:flex-end;height:46px;margin-top:10px}
+.bars .bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.bars .bar i{width:100%;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,var(--amd2),var(--amd));min-height:4px}
+.bars .bar span{font-family:var(--f-hud);font-size:7.5px;color:var(--faint)}
+.bars .bar.today i{background:linear-gradient(180deg,var(--coral2),var(--coral));outline:1.5px dashed rgba(216,180,254,.65);outline-offset:1.5px;animation:pulse 2.2s infinite}
+.bars .bar.nx i{background:rgba(255,255,255,.08)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(216,180,254,0)}50%{box-shadow:0 0 10px 1px rgba(216,180,254,.35)}}
+.line{height:8px;border-radius:4px;background:rgba(255,255,255,.08);margin-top:12px;overflow:hidden}
+.line i{display:block;height:100%;width:82%;border-radius:4px;background:linear-gradient(90deg,var(--coral),var(--amd2));
+  box-shadow:0 0 8px rgba(255,120,80,.5)}
+.recb{margin:14px 18px 4px;padding:14px 15px;border-radius:20px;display:flex;align-items:center;gap:13px;
+  background:linear-gradient(120deg,rgba(255,107,107,.17),rgba(255,209,102,.13));
+  border:1px solid rgba(255,140,90,.42);animation:glow 3.2s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 24px -10px rgba(255,140,90,.4)}50%{box-shadow:0 0 34px -6px rgba(255,150,90,.6)}}
+.recb .flame{font-size:31px;line-height:1;flex:none}
+.recb b{display:block;font-size:15px;font-weight:800;letter-spacing:-.01em}
+.recb p{font-size:11.5px;color:var(--mut);margin-top:2px;line-height:1.4}
+.cal{margin:14px 18px 4px;padding:15px;border-radius:20px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.cal header{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px}
+.cal h3{font-size:14px;font-weight:800;letter-spacing:-.01em}
+.calnav{display:flex;gap:6px}
+.calnav span{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;border:1px solid var(--line);
+  background:rgba(255,255,255,.04);color:var(--mut);font-size:13px;cursor:pointer;transition:.2s}
+.calnav span:hover{color:#fff;border-color:rgba(216,180,254,.35)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.wd{text-align:center;font-family:var(--f-hud);font-size:8.5px;color:var(--faint);padding-bottom:3px}
+.day{aspect-ratio:1;display:grid;place-items:center;border-radius:10px;font-size:11.5px;font-weight:600;color:var(--mut);
+  background:rgba(255,255,255,.03);font-variant-numeric:tabular-nums;transition:transform .18s}
+.day:hover{transform:scale(1.12)}
+.day.l1{background:rgba(168,85,247,.26);color:#EBE0FF}
+.day.l2{background:rgba(168,85,247,.48);color:#fff}
+.day.l3{background:linear-gradient(135deg,#B45CF6,#8B5CF6);color:#fff;box-shadow:0 3px 10px -3px rgba(150,80,255,.6)}
+.day.l4{background:linear-gradient(135deg,var(--coral2),var(--coral));color:#fff;box-shadow:0 0 11px -2px rgba(255,120,80,.65)}
+.day.today{outline:2px solid var(--lilac);outline-offset:1.5px;color:#fff;font-weight:800}
+.day.nx{opacity:.32;background:transparent;border:1px dashed rgba(255,255,255,.12);color:var(--faint)}
+.leg{display:flex;align-items:center;gap:6px;margin-top:12px;font-size:10px;color:var(--faint)}
+.leg .sw{width:12px;height:12px;border-radius:4px;flex:none}
+.leg .sw.s0{background:rgba(255,255,255,.05);border:1px solid var(--line)}
+.leg .sw.s1{background:rgba(168,85,247,.26)}
+.leg .sw.s2{background:rgba(168,85,247,.48)}
+.leg .sw.s3{background:linear-gradient(135deg,#B45CF6,#8B5CF6)}
+.leg .sw.s4{background:linear-gradient(135deg,var(--coral2),var(--coral))}
+.leg .far{margin-left:auto}
+.lb{margin:14px 18px 16px;border-radius:20px;background:rgba(255,255,255,.04);border:1px solid var(--line);padding:4px 15px 8px}
+.rowl{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.rowl:last-child{border-bottom:none}
+.rowl .tsm{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-size:17px;flex:none;
+  background:var(--tg);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.rowl .nm{font-size:12.5px;font-weight:600;width:88px;flex:none}
+.rowl .bar{flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden}
+.rowl .bar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--amd2),var(--coral))}
+.rowl b{width:38px;text-align:right;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+.rowl .z{font-size:9.5px;color:var(--faint);font-weight:600;width:38px;text-align:right}
+
+/* ============ ЭКРАН 3 · ПРОФИЛЬ ============ */
+.pcard{margin:2px 18px 6px;padding:19px 16px 16px;border-radius:26px;text-align:center;
+  background:linear-gradient(150deg,rgba(168,85,247,.22),rgba(255,107,107,.11));
+  border:1px solid rgba(216,180,254,.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 20px 44px -20px rgba(124,58,237,.55)}
+.pava{width:76px;height:76px;margin:0 auto 10px;border-radius:26px;display:grid;place-items:center;
+  font-size:25px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--coral),var(--amd2));
+  box-shadow:0 16px 36px -13px rgba(199,125,255,.75)}
+.pcard h2{font-size:19px;font-weight:800;letter-spacing:-.02em}
+.pcard .since{font-size:11px;color:var(--mut);margin-top:3px}
+.lvl2{max-width:250px;margin:14px auto 0}
+.lvl2 .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.lvl2 .row b{font-size:12.5px;font-weight:800}
+.lvl2 .row span{font-family:var(--f-hud);font-size:9px;letter-spacing:.06em;color:var(--faint);font-variant-numeric:tabular-nums}
+.xp2{height:10px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden;position:relative}
+.xp2 i{display:block;height:100%;width:84%;border-radius:5px;background:linear-gradient(90deg,var(--coral2),var(--coral) 55%,var(--amd2));
+  box-shadow:0 0 10px rgba(255,120,80,.65)}
+.xp2::after{content:"";position:absolute;top:-2px;bottom:-2px;left:84%;width:2px;background:rgba(255,255,255,.35);border-radius:1px}
+.achs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:15px}
+.ach{font-size:11px;font-weight:600;padding:6px 11px;border-radius:999px;color:var(--ink);
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);transition:.2s;cursor:default}
+.ach:hover{transform:translateY(-1px);border-color:rgba(255,209,102,.4)}
+.rows{padding:2px 18px 0}
+.row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;transition:background .2s}
+.row:hover{background:rgba(255,255,255,.045)}
+.row .ts{width:37px;height:37px;border-radius:12px;display:grid;place-items:center;font-size:18px;flex:none;
+  background:var(--tg);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.row .info{min-width:0;flex:1}
+.row .info b{display:block;font-size:13.5px;font-weight:700}
+.row .info span{font-size:11px;color:var(--faint)}
+.strk2{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:14px;font-weight:800;flex:none;font-variant-numeric:tabular-nums}
+.strk2 .none{font-size:11px;font-weight:600;color:var(--faint)}
+.more{width:29px;height:29px;border-radius:10px;display:grid;place-items:center;flex:none;color:var(--faint);
+  background:rgba(255,255,255,.05);border:1px solid var(--line);font-weight:700;letter-spacing:1px;font-size:13px;cursor:pointer;transition:.2s}
+.more:hover{color:#fff;background:rgba(255,255,255,.1)}
+.arch{margin:10px 18px 0;padding:9px 12px;border-radius:16px;border:1px dashed rgba(255,255,255,.15)}
+.arch .hud{display:block;margin-bottom:7px}
+.arch .arow{display:flex;align-items:center;gap:12px}
+.arch .ts{filter:grayscale(1) opacity(.6)}
+.arch .arow .info b{color:var(--mut)}
+.btn-min{margin-left:auto;flex:none;padding:7px 13px;border-radius:11px;border:1px solid rgba(216,180,254,.3);
+  background:rgba(168,85,247,.14);color:var(--lilac);font-size:11.5px;font-weight:700;font-family:var(--f-ui);cursor:pointer;transition:.2s}
+.btn-min:hover{background:rgba(168,85,247,.28);color:#fff}
+.btn-add{display:block;width:calc(100% - 36px);margin:16px 18px 10px;padding:15px;border:none;border-radius:18px;
+  background:linear-gradient(120deg,var(--coral) 0%,#FF8E53 55%,var(--amd2) 130%);
+  font-family:var(--f-ui);font-size:15px;font-weight:800;color:#fff;cursor:pointer;letter-spacing:.01em;
+  box-shadow:0 16px 36px -12px rgba(255,110,90,.7), inset 0 1px 0 rgba(255,255,255,.3);transition:.22s}
+.btn-add:hover{transform:translateY(-2px);filter:brightness(1.07)}
+.btn-add:active{transform:translateY(0)}
+.syncn{text-align:center;font-size:10.5px;color:var(--faint);margin:0 18px 14px}
+
+/* шторка «Новая привычка» */
+.veil{position:absolute;inset:0;z-index:6;background:rgba(9,4,19,.62);backdrop-filter:blur(3px);display:flex;align-items:flex-end}
+.sheet{width:100%;border-radius:28px 28px 0 0;padding:8px 20px 24px;
+  background:linear-gradient(180deg,#2B1349,#1C0C36);border-top:1px solid rgba(216,180,254,.28);
+  box-shadow:0 -24px 70px rgba(0,0,0,.55)}
+.grab{display:block;width:44px;height:5px;border-radius:3px;background:rgba(255,255,255,.2);margin:7px auto 13px}
+.sheet .sh-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px}
+.sheet .sh-h h3{font-size:16px;font-weight:800;letter-spacing:-.01em}
+.fld{display:block;margin-bottom:13px}
+.fld>span{display:block;font-size:11px;font-weight:700;color:var(--mut);margin-bottom:7px}
+.fld input[type=text]{width:100%;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.05);
+  border:1.5px solid rgba(255,255,255,.13);color:var(--ink);font-size:14px;font-family:var(--f-ui);transition:.2s}
+.fld input[type=text]::placeholder{color:var(--faint)}
+.fld input[type=text]:focus{outline:none;border-color:var(--lilac);background:rgba(255,255,255,.08)}
+fieldset{border:none;margin-bottom:13px}
+.emo-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.emo{position:relative;aspect-ratio:1;display:grid;place-items:center;border-radius:12px;cursor:pointer;
+  background:rgba(255,255,255,.05);border:1.5px solid transparent;font-size:19px;transition:.18s}
+.emo input{position:absolute;top:0;left:0;width:1px;height:1px;opacity:0}
+.emo:hover{background:rgba(255,255,255,.09)}
+.emo:has(input:checked){border-color:var(--coral);background:rgba(255,107,107,.15);transform:scale(1.07);
+  box-shadow:0 0 14px -4px rgba(255,107,107,.65)}
+.emo:has(input:focus-visible){outline:2px solid var(--lilac);outline-offset:2px}
+.cols{display:flex;gap:10px}
+.colr{position:relative;width:31px;height:31px;border-radius:50%;cursor:pointer;background:var(--c);
+  border:2px solid transparent;transition:.18s;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.colr input{position:absolute;top:0;left:0;width:1px;height:1px;opacity:0}
+.colr:hover{transform:scale(1.12)}
+.colr:has(input:checked){border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.16), 0 0 14px -1px var(--c);transform:scale(1.12)}
+.seg{display:flex;gap:6px}
+.seg label{flex:1;text-align:center;padding:9px 4px;border-radius:12px;cursor:pointer;
+  background:rgba(255,255,255,.05);border:1.5px solid transparent;font-size:11px;font-weight:600;color:var(--mut);transition:.18s}
+.seg label:hover{background:rgba(255,255,255,.08)}
+.seg label:has(input:checked){border-color:rgba(216,180,254,.5);background:rgba(168,85,247,.19);color:#fff}
+.seg input{position:absolute;top:0;left:0;width:1px;height:1px;opacity:0}
+.rem{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-radius:14px;
+  background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.14);font-size:12.5px;color:var(--mut);margin-bottom:15px}
+.rem b{color:var(--ink);font-weight:600}
+.rem .t{color:var(--lilac);font-weight:700;cursor:pointer}
+.btn-go{display:block;width:100%;padding:14.5px;border:none;border-radius:16px;
+  background:linear-gradient(120deg,var(--coral),#FF8E53 60%,var(--amd2) 140%);
+  font-family:var(--f-ui);font-size:15px;font-weight:800;color:#fff;cursor:pointer;
+  box-shadow:0 14px 32px -12px rgba(255,110,90,.7);transition:.2s}
+.btn-go:hover{transform:translateY(-1px);filter:brightness(1.07)}
+.btn-gh{display:block;width:100%;margin-top:9px;padding:11px;background:none;border:none;
+  color:var(--faint);font-size:13px;font-family:var(--f-ui);cursor:pointer}
+.btn-gh:hover{color:var(--mut)}
+
+/* ============ АДАПТИВ И ДОСТУПНОСТЬ ============ */
+@media (max-width:440px){
+  .phone{border-radius:32px}
+  .shell{border-radius:30px}
+  .hero{flex-direction:column;text-align:center}
+  .hero-col{align-items:center}
+  .podium{gap:5px}
+  .rowl .nm{width:76px}
+  .emo-grid{grid-template-columns:repeat(6,1fr)}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <p class="hud eyebrow">ДЗ3 · «Трекер привычек» · UI-концепция №2 из 3</p>
+  <h1>Яркая геймификация</h1>
+  <p class="tag">Прогресс как игра: отметки копят серии, серии качают уровень, а каждый день превращается в квест с наградой. Тёмная «арена», коралл и аметист, огоньки рекордов.</p>
+  <div class="mchips">
+    <span class="mchip">390 px · mobile-first</span>
+    <span class="mchip">тёмная тема · коралл/аметист</span>
+    <span class="mchip">mock-данные · 6 привычек</span>
+  </div>
+</header>
+
+<main>
+
+<!-- ================= ЭКРАН 1 · СЕГОДНЯ ================= -->
+<section class="scr-block">
+  <div class="scr-label"><span class="n">Экран 1</span><span class="t">Сегодня</span></div>
+  <p class="scr-note">Hero-зона с кольцом «энергии дня», уровнем и XP, ниже — горизонтальная лента карточек-привычек с отметкой в один тап.</p>
+
+  <div class="phone">
+    <div class="shell ph-today">
+      <div class="sbar"><span>9:41</span><span class="r"><span class="sig"><i></i><i></i><i></i><i></i></span><span class="batt"><b></b></span></span></div>
+
+      <header class="ahead">
+        <div class="ava">АК</div>
+        <div class="who">
+          <p class="hud">Пятница · 9 октября</p>
+          <h1>Привет, Аня!</h1>
+        </div>
+        <div class="lvl">
+          <p class="hud">Уровень 12</p>
+          <div class="xp"><i></i></div>
+          <p class="lvl-n"><span class="half">840 / 1000 XP</span><span class="full">890 / 1000 XP</span></p>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="ring" role="img" aria-label="Выполнено 3 из 6 привычек — 50 процентов">
+          <svg viewBox="0 0 150 150" aria-hidden="true">
+            <defs>
+              <linearGradient id="rg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#FF6B6B"/>
+                <stop offset=".55" stop-color="#FF9E5E"/>
+                <stop offset="1" stop-color="#C77DFF"/>
+              </linearGradient>
+            </defs>
+            <circle class="ring-bg" cx="75" cy="75" r="64"/>
+            <circle class="ring-fg" cx="75" cy="75" r="64"/>
+          </svg>
+          <div class="ring-c">
+            <span class="ring-num half"><b>50</b>%</span>
+            <span class="ring-num full"><b>100</b>%</span>
+            <span class="ring-sub half">3 из 6</span>
+            <span class="ring-sub full">все 6 · идеально</span>
+          </div>
+        </div>
+        <div class="hero-col">
+          <p class="hud">Энергия дня</p>
+          <span class="chip fire bigt">🔥 <b>34 дня</b>&nbsp;— лучшая серия</span>
+          <span class="chip">⚡ +40 XP за сегодня</span>
+          <span class="chip">🗓 День 41 в игре</span>
+        </div>
+      </section>
+
+      <div class="secrow">
+        <h2>Привычки на сегодня</h2>
+        <span class="count"><span class="half">3 / 6</span><span class="full">6 / 6 · всё!</span></span>
+      </div>
+
+      <div class="ribbon">
+
+        <article class="card" style="--tg:linear-gradient(135deg,#41B2FF,#7B61FF)">
+          <input type="checkbox" id="t-water" checked>
+          <label for="t-water">
+            <span class="tile">💧</span>
+            <h4>Вода</h4>
+            <p class="meta">8 стаканов</p>
+            <ul class="wk">
+              <li class="on"><i></i>Пн</li><li class="on"><i></i>Вт</li><li class="on"><i></i>Ср</li><li class="on"><i></i>Чт</li><li class="on today"><i></i>Пт</li><li class="nx"><i></i>Сб</li><li class="nx"><i></i>Вс</li>
+            </ul>
+            <span class="strk"><span class="s">🔥 12</span><small>рекорд 14</small></span>
+            <span class="check"></span>
+          </label>
+        </article>
+
+        <article class="card record" style="--tg:linear-gradient(135deg,#FFB35C,#FF6B6B)">
+          <span class="badge">Новый рекорд</span>
+          <input type="checkbox" id="t-run" checked>
+          <label for="t-run">
+            <span class="tile">🏃</span>
+            <h4>Зарядка</h4>
+            <p class="meta">15 минут</p>
+            <ul class="wk">
+              <li class="on"><i></i>Пн</li><li class="on"><i></i>Вт</li><li class="on"><i></i>Ср</li><li class="on"><i></i>Чт</li><li class="on today"><i></i>Пт</li><li class="nx"><i></i>Сб</li><li class="nx"><i></i>Вс</li>
+            </ul>
+            <span class="strk"><span class="s">🔥 34</span><small>было 33</small></span>
+            <span class="check"></span>
+          </label>
+        </article>
+
+        <article class="card" style="--tg:linear-gradient(135deg,#FFD166,#FF9E5C)">
+          <input type="checkbox" id="t-read" checked>
+          <label for="t-read">
+            <span class="tile">📚</span>
+            <h4>Чтение</h4>
+            <p class="meta">30 страниц</p>
+            <ul class="wk">
+              <li class="on"><i></i>Пн</li><li class="on"><i></i>Вт</li><li class="on"><i></i>Ср</li><li class="on"><i></i>Чт</li><li class="on today"><i></i>Пт</li><li class="nx"><i></i>Сб</li><li class="nx"><i></i>Вс</li>
+            </ul>
+            <span class="strk"><span class="s">🔥 21</span><small>на пике</small></span>
+            <span class="check"></span>
+          </label>
+        </article>
+
+        <article class="card" style="--tg:linear-gradient(135deg,#C77DFF,#8B5CF6)">
+          <input type="checkbox" id="t-medit">
+          <label for="t-medit">
+            <span class="tile">🧘</span>
+            <h4>Медитация</h4>
+            <p class="meta">10 минут</p>
+            <ul class="wk">
+              <li class="on"><i></i>Пн</li><li class="on"><i></i>Вт</li><li><i></i>Ср</li><li><i></i>Чт</li><li class="today"><i></i>Пт</li><li class="nx"><i></i>Сб</li><li class="nx"><i></i>Вс</li>
+            </ul>
+            <span class="strk"><span class="s brk">💤 0</span><span class="brk">сорвана ср</span></span>
+            <span class="check"></span>
+          </label>
+        </article>
+
+        <article class="card" style="--tg:linear-gradient(135deg,#7EE787,#2FBF8F)">
+          <input type="checkbox" id="t-dinner">
+          <label for="t-dinner">
+            <span class="tile">🥗</span>
+            <h4>Ужин</h4>
+            <p class="meta">без фастфуда</p>
+            <ul class="wk">
+              <li><i></i>Пн</li><li class="on"><i></i>Вт</li><li class="on"><i></i>Ср</li><li class="on"><i></i>Чт</li><li class="today"><i></i>Пт</li><li class="nx"><i></i>Сб</li><li class="nx"><i></i>Вс</li>
+            </ul>
+            <span class="strk"><span class="s">🔥 4</span><small>рекорд 11</small></span>
+            <span class="check"></span>
+          </label>
+        </article>
+
+        <article class="card" style="--tg:linear-gradient(135deg,#F472B6,#B478F6)">
+          <input type="checkbox" id="t-lang">
+          <label for="t-lang">
+            <span class="tile">💬</span>
+            <h4>Английский</h4>
+            <p class="meta">15 минут</p>
+            <ul class="wk">
+              <li class="on"><i></i>Пн</li><li class="on"><i></i>Вт</li><li class="on"><i></i>Ср</li><li class="on"><i></i>Чт</li><li class="today"><i></i>Пт</li><li class="nx"><i></i>Сб</li><li class="nx"><i></i>Вс</li>
+            </ul>
+            <span class="strk"><span class="s">🔥 9</span><small>рекорд 22</small></span>
+            <span class="check"></span>
+          </label>
+        </article>
+
+      </div>
+
+      <div class="party">
+        <span class="pe wig">🎉</span>
+        <div>
+          <b>Идеальный день!</b>
+          <p>Все 6 привычек отмечены — <b>+50 XP</b>. Серии целы, до уровня 13 осталось 110 XP.</p>
+        </div>
+        <span class="pe wig">✨</span>
+      </div>
+
+      <nav class="tabbar">
+        <a class="tab on"><span class="ti">🎯</span>Сегодня</a>
+        <a class="tab"><span class="ti">📊</span>Статистика</a>
+        <a class="tab"><span class="ti">👤</span>Профиль</a>
+      </nav>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ЭКРАН 2 · СТАТИСТИКА ================= -->
+<section class="scr-block">
+  <div class="scr-label"><span class="n">Экран 2</span><span class="t">Статистика</span></div>
+  <p class="scr-note">Пьедестал лучших серий с медалями, проценты недели и месяца, календарь-хитмап октября и лидерборд привычек.</p>
+
+  <div class="phone">
+    <div class="shell">
+      <div class="sbar"><span>9:41</span><span class="r"><span class="sig"><i></i><i></i><i></i><i></i></span><span class="batt"><b></b></span></span></div>
+
+      <header class="ahead">
+        <div class="who">
+          <p class="hud">Прогресс и рекорды</p>
+          <p class="ttl">Статистика</p>
+        </div>
+        <span class="mpick">Октябрь 2026 ▾</span>
+        <div class="ava">АК</div>
+      </header>
+
+      <section class="podium">
+        <div class="pod p2">
+          <span class="med">🥈</span>
+          <b>21</b>
+          <span class="nm">📚 Чтение</span>
+        </div>
+        <div class="pod p1">
+          <span class="med">🥇</span>
+          <b>34</b>
+          <span class="nm">🏃 Зарядка</span>
+        </div>
+        <div class="pod p3">
+          <span class="med">🥉</span>
+          <b>12</b>
+          <span class="nm">💧 Вода</span>
+        </div>
+      </section>
+
+      <div class="tiles">
+        <div class="tile2">
+          <span class="hud">Неделя</span>
+          <p class="v">76<em>%</em></p>
+          <div class="bars">
+            <div class="bar"><i style="height:71%"></i><span>Пн</span></div>
+            <div class="bar"><i style="height:86%"></i><span>Вт</span></div>
+            <div class="bar"><i style="height:71%"></i><span>Ср</span></div>
+            <div class="bar"><i style="height:86%"></i><span>Чт</span></div>
+            <div class="bar today"><i style="height:67%"></i><span>Пт</span></div>
+            <div class="bar nx"><i style="height:4%"></i><span>Сб</span></div>
+            <div class="bar nx"><i style="height:4%"></i><span>Вс</span></div>
+          </div>
+        </div>
+        <div class="tile2">
+          <span class="hud">Октябрь</span>
+          <p class="v">82<em>%</em></p>
+          <p class="sub">лучше, чем в сентябре (74%)</p>
+          <div class="line"><i></i></div>
+        </div>
+        <div class="tile2">
+          <span class="hud">Идеальные дни</span>
+          <p class="v">✨ 3</p>
+          <p class="sub">6 из 6 привычек — 2, 4 и 7 октября</p>
+        </div>
+        <div class="tile2">
+          <span class="hud">Всего отметок</span>
+          <p class="v">⚡ 214</p>
+          <p class="sub">за 41 день в игре</p>
+        </div>
+      </div>
+
+      <section class="recb">
+        <span class="flame">🔥</span>
+        <div>
+          <b>34 дня подряд — рекорд месяца</b>
+          <p>Зарядка · прежний рекорд 33 побит сегодня утром</p>
+        </div>
+      </section>
+
+      <section class="cal">
+        <header>
+          <h3>Октябрь 2026</h3>
+          <span class="calnav"><span>‹</span><span>›</span></span>
+        </header>
+        <div class="cal-grid">
+          <span class="wd">Пн</span><span class="wd">Вт</span><span class="wd">Ср</span><span class="wd">Чт</span><span class="wd">Пт</span><span class="wd">Сб</span><span class="wd">Вс</span>
+          <span class="day"></span><span class="day"></span><span class="day"></span>
+          <span class="day l3">1</span><span class="day l4">2</span><span class="day l3">3</span><span class="day l4">4</span>
+          <span class="day l3">5</span><span class="day l3">6</span><span class="day l4">7</span><span class="day l3">8</span>
+          <span class="day l2 today">9</span><span class="day nx">10</span><span class="day nx">11</span>
+          <span class="day nx">12</span><span class="day nx">13</span><span class="day nx">14</span><span class="day nx">15</span><span class="day nx">16</span><span class="day nx">17</span><span class="day nx">18</span>
+          <span class="day nx">19</span><span class="day nx">20</span><span class="day nx">21</span><span class="day nx">22</span><span class="day nx">23</span><span class="day nx">24</span><span class="day nx">25</span>
+          <span class="day nx">26</span><span class="day nx">27</span><span class="day nx">28</span><span class="day nx">29</span><span class="day nx">30</span><span class="day nx">31</span>
+        </div>
+        <div class="leg">
+          меньше
+          <span class="sw s0"></span><span class="sw s1"></span><span class="sw s2"></span><span class="sw s3"></span><span class="sw s4"></span>
+          больше
+          <span class="far">9 октября — сегодня</span>
+        </div>
+      </section>
+
+      <div class="secrow" style="padding-top:12px">
+        <h2>Серии по привычкам</h2>
+        <span class="count">макс. 34</span>
+      </div>
+      <section class="lb">
+        <div class="rowl" style="--tg:linear-gradient(135deg,#FFB35C,#FF6B6B)">
+          <span class="tsm">🏃</span><span class="nm">Зарядка</span>
+          <span class="bar"><i style="width:100%"></i></span><b>34</b>
+        </div>
+        <div class="rowl" style="--tg:linear-gradient(135deg,#FFD166,#FF9E5C)">
+          <span class="tsm">📚</span><span class="nm">Чтение</span>
+          <span class="bar"><i style="width:62%"></i></span><b>21</b>
+        </div>
+        <div class="rowl" style="--tg:linear-gradient(135deg,#41B2FF,#7B61FF)">
+          <span class="tsm">💧</span><span class="nm">Вода</span>
+          <span class="bar"><i style="width:35%"></i></span><b>12</b>
+        </div>
+        <div class="rowl" style="--tg:linear-gradient(135deg,#F472B6,#B478F6)">
+          <span class="tsm">💬</span><span class="nm">Английский</span>
+          <span class="bar"><i style="width:26%"></i></span><b>9</b>
+        </div>
+        <div class="rowl" style="--tg:linear-gradient(135deg,#7EE787,#2FBF8F)">
+          <span class="tsm">🥗</span><span class="nm">Ужин</span>
+          <span class="bar"><i style="width:12%"></i></span><b>4</b>
+        </div>
+        <div class="rowl" style="--tg:linear-gradient(135deg,#C77DFF,#8B5CF6)">
+          <span class="tsm">🧘</span><span class="nm">Медитация</span>
+          <span class="bar"><i style="width:0%"></i></span><span class="z">сорвана</span>
+        </div>
+      </section>
+
+      <nav class="tabbar">
+        <a class="tab"><span class="ti">🎯</span>Сегодня</a>
+        <a class="tab on"><span class="ti">📊</span>Статистика</a>
+        <a class="tab"><span class="ti">👤</span>Профиль</a>
+      </nav>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ЭКРАН 3 · ПРОФИЛЬ / ПРИВЫЧКИ ================= -->
+<section class="scr-block">
+  <div class="scr-label"><span class="n">Экран 3</span><span class="t">Профиль и привычки</span></div>
+  <p class="scr-note">Карточка игрока с уровнем и ачивками, список всех привычек, архив и открытая шторка «Новая привычка» поверх затемнённого экрана.</p>
+
+  <div class="phone">
+    <div class="shell">
+      <div class="sbar"><span>9:41</span><span class="r"><span class="sig"><i></i><i></i><i></i><i></i></span><span class="batt"><b></b></span></span></div>
+
+      <header class="ahead">
+        <div class="who">
+          <p class="hud">Игрок · день 41</p>
+          <p class="ttl">Профиль</p>
+        </div>
+        <span class="iconbtn" style="margin-left:auto">⚙</span>
+      </header>
+
+      <section class="pcard">
+        <div class="pava">АК</div>
+        <h2>Аня Ковалёва</h2>
+        <p class="since">в игре с 29 августа · 6 активных привычек</p>
+        <div class="lvl2">
+          <div class="row"><b>Уровень 12 — «Марафонец»</b><span>840 / 1000 XP</span></div>
+          <div class="xp2"><i></i></div>
+        </div>
+        <div class="achs">
+          <span class="ach">🔥 30 дней подряд</span>
+          <span class="ach">⚡ 214 отметок</span>
+          <span class="ach">🌅 10 ранних утр</span>
+          <span class="ach">📚 Книжный червь</span>
+        </div>
+      </section>
+
+      <div class="secrow" style="padding-bottom:6px">
+        <h2>Мои привычки</h2>
+        <span class="count">6 активных</span>
+      </div>
+
+      <div class="rows">
+        <div class="row" style="--tg:linear-gradient(135deg,#FFB35C,#FF6B6B)">
+          <span class="ts">🏃</span>
+          <span class="info"><b>Зарядка</b><span>каждый день · 15 минут</span></span>
+          <span class="strk2">🔥 34</span>
+          <span class="more">⋯</span>
+        </div>
+        <div class="row" style="--tg:linear-gradient(135deg,#FFD166,#FF9E5C)">
+          <span class="ts">📚</span>
+          <span class="info"><b>Чтение</b><span>каждый день · 30 страниц</span></span>
+          <span class="strk2">🔥 21</span>
+          <span class="more">⋯</span>
+        </div>
+        <div class="row" style="--tg:linear-gradient(135deg,#41B2FF,#7B61FF)">
+          <span class="ts">💧</span>
+          <span class="info"><b>Вода</b><span>каждый день · 8 стаканов</span></span>
+          <span class="strk2">🔥 12</span>
+          <span class="more">⋯</span>
+        </div>
+        <div class="row" style="--tg:linear-gradient(135deg,#F472B6,#B478F6)">
+          <span class="ts">💬</span>
+          <span class="info"><b>Английский</b><span>по будням · 15 минут</span></span>
+          <span class="strk2">🔥 9</span>
+          <span class="more">⋯</span>
+        </div>
+        <div class="row" style="--tg:linear-gradient(135deg,#7EE787,#2FBF8F)">
+          <span class="ts">🥗</span>
+          <span class="info"><b>Ужин без фастфуда</b><span>каждый день</span></span>
+          <span class="strk2">🔥 4</span>
+          <span class="more">⋯</span>
+        </div>
+        <div class="row" style="--tg:linear-gradient(135deg,#C77DFF,#8B5CF6)">
+          <span class="ts">🧘</span>
+          <span class="info"><b>Медитация</b><span>каждый день · 10 минут</span></span>
+          <span class="strk2 none">серия 0</span>
+          <span class="more">⋯</span>
+        </div>
+      </div>
+
+      <div class="arch">
+        <span class="hud">Архив · 1</span>
+        <div class="arow" style="--tg:linear-gradient(135deg,#9A8BB8,#6E5F94)">
+          <span class="ts">🎸</span>
+          <span class="info"><b>Гитара</b><span>в архиве · лучшая серия 45</span></span>
+          <button class="btn-min" type="button">Вернуть</button>
+        </div>
+      </div>
+
+      <button class="btn-add" type="button">＋ Новая привычка</button>
+      <p class="syncn">☁️ Аккаунт и синхронизация появятся на этапе ДЗ5</p>
+
+      <nav class="tabbar">
+        <a class="tab"><span class="ti">🎯</span>Сегодня</a>
+        <a class="tab"><span class="ti">📊</span>Статистика</a>
+        <a class="tab on"><span class="ti">👤</span>Профиль</a>
+      </nav>
+
+      <div class="veil">
+        <section class="sheet" aria-label="Новая привычка">
+          <span class="grab"></span>
+          <div class="sh-h">
+            <h3>Новая привычка</h3>
+            <span class="iconbtn" style="width:30px;height:30px;font-size:13px">✕</span>
+          </div>
+
+          <label class="fld">
+            <span>Название</span>
+            <input type="text" placeholder="Например: растяжка 10 минут">
+          </label>
+
+          <fieldset>
+            <div class="fld" style="margin-bottom:7px"><span>Эмодзи</span></div>
+            <div class="emo-grid">
+              <label class="emo"><input type="radio" name="emo" checked><span>🎯</span></label>
+              <label class="emo"><input type="radio" name="emo"><span>🔥</span></label>
+              <label class="emo"><input type="radio" name="emo"><span>💧</span></label>
+              <label class="emo"><input type="radio" name="emo"><span>📚</span></label>
+              <label class="emo"><input type="radio" name="emo"><span>🧘</span></label>
+              <label class="emo"><input type="radio" name="emo"><span>🥗</span></label>
+              <label class="emo"><input type="radio" name="emo"><span>💬</span></label>
+              <label class="emo"><input type="radio" name="emo"><span>🎸</span></label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <div class="fld" style="margin-bottom:7px"><span>Цвет карточки</span></div>
+            <div class="cols">
+              <label class="colr" style="--c:linear-gradient(135deg,#FFB35C,#FF6B6B)"><input type="radio" name="col" checked></label>
+              <label class="colr" style="--c:linear-gradient(135deg,#C77DFF,#8B5CF6)"><input type="radio" name="col"></label>
+              <label class="colr" style="--c:linear-gradient(135deg,#41B2FF,#7B61FF)"><input type="radio" name="col"></label>
+              <label class="colr" style="--c:linear-gradient(135deg,#7EE787,#2FBF8F)"><input type="radio" name="col"></label>
+              <label class="colr" style="--c:linear-gradient(135deg,#FFD166,#FF9E5C)"><input type="radio" name="col"></label>
+              <label class="colr" style="--c:linear-gradient(135deg,#F472B6,#B478F6)"><input type="radio" name="col"></label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <div class="fld" style="margin-bottom:7px"><span>Расписание</span></div>
+            <div class="seg">
+              <label><input type="radio" name="frq" checked>Каждый день</label>
+              <label><input type="radio" name="frq">По будням</label>
+              <label><input type="radio" name="frq">Своё</label>
+            </div>
+          </fieldset>
+
+          <div class="rem"><span>🔔 Напоминание</span><span><b>7:00</b> <span class="t">›</span></span></div>
+
+          <button class="btn-go" type="button">Создать привычку</button>
+          <button class="btn-gh" type="button">Отмена</button>
+        </section>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="page-foot">
+  <p><b>Статический макет</b> — один файл, HTML + inline CSS, без внешних зависимостей и сборки.</p>
+  <p><b>Живой минимум:</b> отметки на «Сегодня» кликаются — карточка вспыхивает, а при всех шести кольцо само доходит до 100%, XP растёт и появляется праздничный баннер. Эмодзи, цвет и расписание в шторке тоже выбираются.</p>
+  <p>Данные вымышленные: пятница, 9 октября 2026 · 6 привычек · серии 0–34.</p>
+</footer>
+
+</body>
+</html>

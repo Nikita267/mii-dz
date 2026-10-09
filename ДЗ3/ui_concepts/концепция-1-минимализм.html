@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Концепция 1 — «Спокойный минимализм» · Трекер привычек</title>
+<style>
+  /* ============ Токены концепции ============ */
+  :root{
+    --bg:        #FAF7F1;   /* тёплая светлая подложка экрана */
+    --card:      #FFFFFF;
+    --ink:       #2C2A25;   /* тёплый почти-чёрный */
+    --ink-soft:  #77715F;
+    --ink-faint: #A39D8C;
+    --line:      #EBE5D8;
+    --sage:      #7C9883;   /* спокойный акцент — шалфей */
+    --sage-deep: #58755F;
+    --sage-mist: #E9F0E8;
+    --bar-off:   #E7E1D2;
+    --radius:    20px;
+    --disp: Georgia,"Times New Roman",serif;
+    --ui: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    font-family:var(--ui);
+    color:#F2EEE4;
+    background:#1C1A15 radial-gradient(1100px 520px at 50% -80px,#2C2820 0%,#1C1A15 62%) no-repeat;
+    padding:52px 18px 72px;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background:var(--sage); color:#fff; }
+
+  /* ============ Страница-подложка ============ */
+  .page-head{ max-width:560px; margin:0 auto 8px; text-align:center; }
+  .ph-eyebrow{
+    font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;
+    color:#A9C2AC; margin-bottom:12px;
+  }
+  .ph-title{ font-family:var(--disp); font-weight:400; font-size:clamp(26px,6vw,34px); letter-spacing:.01em; color:#F5F1E7; }
+  .ph-note{ font-size:13.5px; line-height:1.55; color:rgba(245,241,232,.52); max-width:430px; margin:10px auto 0; }
+
+  .sep{ display:flex; align-items:center; gap:16px; max-width:560px; margin:54px auto 20px; }
+  .sep::before,.sep::after{ content:""; flex:1; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,.14)); }
+  .sep::after{ background:linear-gradient(90deg,rgba(255,255,255,.14),transparent); }
+  .sep-c{ text-align:center; white-space:nowrap; }
+  .sep-tag{ font-size:10.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:rgba(242,238,228,.55); }
+  .sep-note{ font-size:12px; color:rgba(242,238,228,.36); margin-top:4px; }
+
+  .foot{ margin-top:56px; text-align:center; font-size:12px; line-height:1.7; color:rgba(245,241,232,.35); }
+
+  /* ============ Рамка «телефона» ============ */
+  .phone{
+    position:relative;
+    width:min(390px,100%);
+    margin:0 auto;
+    background:var(--bg);
+    border-radius:40px;
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow:0 34px 90px rgba(0,0,0,.55),0 6px 18px rgba(0,0,0,.4);
+    overflow:hidden;
+    color:var(--ink);
+  }
+  .island{
+    position:absolute; top:11px; left:50%; transform:translateX(-50%);
+    width:96px; height:27px; border-radius:14px; background:#15130F; z-index:5;
+  }
+  .status{
+    height:52px; display:flex; justify-content:space-between; align-items:center;
+    padding:6px 27px 0; font-size:13.5px; font-weight:600; color:var(--ink);
+  }
+  .status-r{ display:flex; align-items:center; gap:6px; }
+  .status-r svg{ display:block; }
+
+  .scr{ padding:6px 18px 16px; }
+  .tabbar{
+    display:flex; background:var(--card); border-top:1px solid var(--line);
+    padding:10px 10px 20px; position:relative;
+  }
+  .tab{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
+    background:none; border:0; cursor:pointer; padding:4px 0;
+    color:#A29B89; font-family:var(--ui); font-size:11px; font-weight:600;
+    transition:color .15s ease;
+  }
+  .tab svg{ width:22px; height:22px; }
+  .tab:hover{ color:var(--sage-deep); }
+  .tab.on{ color:var(--sage-deep); }
+  .home-bar{
+    position:absolute; left:50%; bottom:7px; transform:translateX(-50%);
+    width:118px; height:4px; border-radius:4px; background:rgba(44,42,37,.16);
+  }
+
+  /* ============ Типографика экрана ============ */
+  .eyebrow{
+    font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--ink-faint);
+  }
+  .h-title{
+    font-family:var(--disp); font-weight:400; font-size:34px; letter-spacing:-.005em;
+    color:var(--ink); margin-top:5px;
+  }
+  .scr-head{ padding:10px 4px 16px; }
+
+  /* ============ Экран 1 · Сегодня ============ */
+  .day-progress{ padding:2px 4px 18px; }
+  .dp-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+  .dp-lbl{ font-size:13px; color:var(--ink-soft); }
+  .dp-val{ font-size:13px; font-weight:700; color:var(--ink); }
+  .dp-track{ height:6px; border-radius:99px; background:var(--bar-off); overflow:hidden; }
+  .dp-fill{ height:100%; width:50%; border-radius:99px; background:var(--sage); transition:width .25s ease; }
+
+  .habits{ display:flex; flex-direction:column; gap:10px; }
+  .habit{
+    display:flex; align-items:center; gap:13px;
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:15px 15px 15px 14px;
+    box-shadow:0 1px 2px rgba(70,58,34,.04);
+    transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .2s ease;
+  }
+  .habit:hover{ transform:translateY(-1px); border-color:#DDD6C5; box-shadow:0 8px 20px rgba(70,58,34,.09); }
+  .habit:has(input:checked){ background:#FBFBF6; }
+  .habit:has(input:checked) .hb-name{ color:var(--ink-soft); }
+  .habit:has(input:checked) .d.today{ background:var(--sage); border-color:var(--sage); }
+
+  .chip{
+    flex:none; width:48px; height:48px; border-radius:16px;
+    display:flex; align-items:center; justify-content:center; font-size:23px;
+  }
+  .hb-main{ flex:1; min-width:0; }
+  .hb-name{ font-size:16px; font-weight:650; color:var(--ink); letter-spacing:-.01em; transition:color .2s; }
+  .hb-sub{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+
+  .dots{ display:flex; gap:5px; margin-top:9px; }
+  .d{ width:7px; height:7px; border-radius:50%; }
+  .d.on{ background:var(--sage); }
+  .d.off{ border:1.5px solid #DCD5C4; }
+  .d.today{ box-shadow:0 0 0 2.5px rgba(124,152,131,.3); }
+
+  .hb-side{ display:flex; flex-direction:column; align-items:flex-end; gap:11px; }
+  .streak{
+    font-size:11px; font-weight:700; letter-spacing:.02em;
+    padding:3.5px 9px; border-radius:99px;
+    background:var(--sage-mist); color:var(--sage-deep); white-space:nowrap;
+  }
+  .streak.broke{ background:#F0ECE1; color:#8D8776; font-weight:600; }
+
+  .check{ position:relative; flex:none; width:44px; height:44px; cursor:pointer; }
+  .check input{ position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; }
+  .ring{
+    position:absolute; inset:0; border-radius:50%;
+    border:2px solid #D8D1BE; background:var(--card);
+    transition:background .16s ease,border-color .16s ease,transform .1s ease;
+  }
+  .ring::after{
+    content:""; position:absolute; left:13px; top:14px; width:14px; height:7px;
+    border-left:2.5px solid #fff; border-bottom:2.5px solid #fff;
+    transform:rotate(-45deg) scale(.6); opacity:0;
+    transition:opacity .12s ease,transform .16s ease;
+  }
+  .check:hover .ring{ border-color:var(--sage); }
+  .check:active .ring{ transform:scale(.92); }
+  .check input:checked + .ring{ background:var(--sage); border-color:var(--sage); }
+  .check input:checked + .ring::after{ opacity:1; transform:rotate(-45deg) scale(1); }
+  .check input:focus-visible + .ring{ box-shadow:0 0 0 3px rgba(124,152,131,.35); }
+
+  /* ============ Экран 2 · Статистика ============ */
+  .month-nav{ display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink-soft); }
+  .month-nav b{ font-family:var(--disp); font-weight:400; font-size:17px; color:var(--ink); }
+  .month-nav span{ cursor:pointer; padding:2px 6px; border-radius:8px; transition:background .15s; }
+  .month-nav span:hover{ background:var(--sage-mist); color:var(--sage-deep); }
+
+  .tiles{ display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  .tile{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px 16px 14px;
+  }
+  .tile-num{ font-family:var(--disp); font-size:40px; line-height:1; color:var(--ink); }
+  .tile-num small{ font-family:var(--ui); font-size:13px; font-weight:600; color:var(--ink-soft); margin-left:3px; }
+  .tile-lbl{ font-size:11.5px; color:var(--ink-soft); margin-top:7px; line-height:1.4; }
+
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:17px 17px 15px; margin-top:11px;
+  }
+  .card-head{ display:flex; justify-content:space-between; align-items:baseline; }
+  .card-t{ font-size:15px; font-weight:650; color:var(--ink); }
+  .card-a{ font-size:13px; font-weight:700; color:var(--sage-deep); }
+
+  .bars{ display:flex; gap:9px; align-items:flex-end; height:132px; margin-top:16px; }
+  .bar{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; height:100%; }
+  .bar-v{ font-size:10.5px; font-weight:600; color:var(--ink-faint); }
+  .bar-col{ width:24px; border-radius:7px 7px 4px 4px; background:var(--bar-off); }
+  .bar.now .bar-col{ background:var(--sage); }
+  .bar.now .bar-v{ color:var(--sage-deep); }
+  .bar.fut .bar-col{ height:3px !important; border-radius:2px; background:#E4DECD; }
+  .bar-l{ font-size:10.5px; font-weight:600; color:var(--ink-faint); }
+  .bar.fut .bar-l{ color:#C7C0AD; }
+
+  .cal{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-top:14px; }
+  .cal-w{ text-align:center; font-size:10.5px; font-weight:700; color:var(--ink-faint); padding:4px 0 7px; }
+  .cal-d{
+    aspect-ratio:1/1.06; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3.5px;
+    font-size:12px; font-weight:550; color:var(--ink); border-radius:11px;
+  }
+  .cal-d.dim{ color:#C9C2AE; font-weight:450; }
+  .cal-d.today .cnum{
+    width:25px; height:25px; display:flex; align-items:center; justify-content:center;
+    border:1.5px solid var(--sage); border-radius:50%; color:var(--sage-deep); font-weight:700;
+  }
+  .cdot{ width:5px; height:5px; border-radius:50%; }
+  .cdot.full{ background:var(--sage); }
+  .cdot.part{ background:#C3D2C4; }
+  .cdot.miss{ border:1.5px solid #CFC8B4; width:4px; height:4px; }
+
+  .legend{ display:flex; gap:14px; margin-top:12px; font-size:11px; color:var(--ink-soft); }
+  .legend i{ display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:5px; }
+
+  /* ============ Экран 3 · Профиль ============ */
+  .me{ display:flex; align-items:center; gap:15px; padding:16px 4px 20px; }
+  .avatar{
+    width:58px; height:58px; border-radius:50%; background:var(--sage-mist);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--disp); font-size:21px; color:var(--sage-deep);
+  }
+  .me-name{ font-size:19px; font-weight:700; letter-spacing:-.01em; }
+  .me-sub{ font-size:12.5px; color:var(--ink-soft); margin-top:3px; }
+
+  .sec{ margin:20px 4px 10px; display:flex; justify-content:space-between; align-items:baseline; }
+  .sec-r{ font-size:12px; color:var(--ink-soft); }
+
+  .rows{ display:flex; flex-direction:column; gap:9px; }
+  .row{
+    display:flex; align-items:center; gap:12px;
+    background:var(--card); border:1px solid var(--line); border-radius:18px;
+    padding:12px 14px; transition:transform .15s ease,box-shadow .15s ease,border-color .15s;
+    cursor:pointer;
+  }
+  .row:hover{ transform:translateY(-1px); border-color:#DDD6C5; box-shadow:0 6px 16px rgba(70,58,34,.08); }
+  .chip-s{ flex:none; width:40px; height:40px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:19px; }
+  .row-name{ font-size:15px; font-weight:620; }
+  .row-sub{ font-size:12px; color:var(--ink-soft); margin-top:1.5px; }
+  .row-meta{ margin-left:auto; font-size:12px; color:var(--ink-soft); white-space:nowrap; }
+  .row-meta b{ color:var(--sage-deep); font-weight:700; }
+  .chev{ color:#CFC8B5; font-size:17px; line-height:1; margin-left:2px; }
+
+  .row.arch{ opacity:.6; }
+  .row.arch:hover{ opacity:.85; }
+  .restore{ margin-left:auto; font-size:12.5px; font-weight:650; color:var(--sage-deep); white-space:nowrap; }
+  .restore:hover{ text-decoration:underline; }
+
+  .add{
+    display:flex; align-items:center; gap:13px; margin-top:9px;
+    border:1.5px dashed #B4C6B4; border-radius:var(--radius); background:#F3F7F1;
+    padding:15px 16px; cursor:pointer; transition:background .15s,border-color .15s,transform .15s;
+  }
+  .add:hover{ background:#ECF3EA; border-color:var(--sage); transform:translateY(-1px); }
+  .add-plus{
+    width:36px; height:36px; border-radius:50%; background:#DCE7DA;
+    display:flex; align-items:center; justify-content:center;
+    font-size:21px; font-weight:600; color:var(--sage-deep); line-height:1;
+  }
+  .add-t{ font-size:15px; font-weight:650; color:var(--sage-deep); }
+  .add-s{ font-size:12px; color:#8B9B8B; margin-top:1.5px; }
+
+  .sync{
+    margin-top:18px; padding:13px 15px; border-radius:15px;
+    background:#F2EEE3; font-size:12px; line-height:1.5; color:var(--ink-soft);
+    display:flex; gap:9px; align-items:flex-start;
+  }
+  .sync b{ color:var(--ink); font-weight:650; }
+
+  @media (max-width:440px){
+    body{ padding:26px 9px 48px; }
+    .phone{ border-radius:26px; }
+    .island{ width:78px; height:23px; }
+    .sep{ margin:38px auto 16px; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <div class="ph-eyebrow">Трекер привычек · ДЗ3 · UI-концепция №1</div>
+  <h1 class="ph-title">«Спокойный минимализм»</h1>
+  <p class="ph-note">Тёплый светлый интерфейс, много воздуха и один шалфейный акцент.
+  Отметка привычки — один тап по крупному чекбоксу; прогресс виден без чтения цифр.</p>
+</header>
+
+<!-- ================= ЭКРАН 1 · СЕГОДНЯ ================= -->
+<div class="sep" role="presentation">
+  <div class="sep-c">
+    <div class="sep-tag">Экран 1 · Сегодня</div>
+    <div class="sep-note">список привычек · отметка одним тапом · прогресс дня</div>
+  </div>
+</div>
+
+<section class="phone" aria-label="Экран 1 — Сегодня">
+  <div class="island"></div>
+  <div class="status">
+    <span>9:41</span>
+    <span class="status-r" aria-hidden="true">
+      <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.3" y="5" width="3" height="6" rx="1"/><rect x="8.6" y="2.6" width="3" height="8.4" rx="1"/><rect x="12.9" y="0" width="3" height="11" rx="1"/></svg>
+      <svg width="15" height="11" viewBox="0 0 24 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M2 6.5C8 .8 16 .8 22 6.5"/><path d="M6 11c3.6-3.4 8.4-3.4 12 0"/><path d="M10 15.2c1.6-1.4 4.4-1.4 6 0"/></svg>
+      <svg width="23" height="11" viewBox="0 0 25 12" fill="none"><rect x=".8" y=".8" width="19.4" height="10.4" rx="3.2" stroke="currentColor" stroke-opacity=".45" stroke-width="1.4"/><rect x="2.8" y="2.8" width="12" height="7.2" rx="1.6" fill="currentColor"/><path d="M22.2 4v4a2.2 2.2 0 0 0 0-4z" fill="currentColor" fill-opacity=".45"/></svg>
+    </span>
+  </div>
+
+  <div class="scr">
+    <div class="scr-head">
+      <div class="eyebrow">Пятница, 9 октября</div>
+      <h2 class="h-title">Сегодня</h2>
+    </div>
+
+    <div class="day-progress">
+      <div class="dp-row">
+        <span class="dp-lbl">Отмечено привычек</span>
+        <span class="dp-val" id="dayCount">3 из 6</span>
+      </div>
+      <div class="dp-track"><div class="dp-fill" id="dayBar"></div></div>
+    </div>
+
+    <div class="habits js-day">
+
+      <article class="habit">
+        <div class="chip" style="background:#E8F0F5">💧</div>
+        <div class="hb-main">
+          <div class="hb-name">Вода</div>
+          <div class="hb-sub">8 стаканов в течение дня</div>
+          <div class="dots">
+            <span class="d on" title="Сб 3 окт — выполнено"></span><span class="d on" title="Вс 4 окт — выполнено"></span><span class="d on" title="Пн 5 окт — выполнено"></span><span class="d on" title="Вт 6 окт — выполнено"></span><span class="d on" title="Ср 7 окт — выполнено"></span><span class="d on" title="Чт 8 окт — выполнено"></span><span class="d on today" title="Пт 9 окт — сегодня, выполнено"></span>
+          </div>
+        </div>
+        <div class="hb-side">
+          <span class="streak" title="Рекордная серия">🔥 21 день</span>
+          <label class="check"><input type="checkbox" checked aria-label="Вода — выполнено сегодня"><span class="ring"></span></label>
+        </div>
+      </article>
+
+      <article class="habit">
+        <div class="chip" style="background:#F6EDE3">🏃</div>
+        <div class="hb-main">
+          <div class="hb-name">Бег</div>
+          <div class="hb-sub">30 минут, лёгкий темп</div>
+          <div class="dots">
+            <span class="d on" title="Сб 3 окт — выполнено"></span><span class="d on" title="Вс 4 окт — выполнено"></span><span class="d on" title="Пн 5 окт — выполнено"></span><span class="d on" title="Вт 6 окт — выполнено"></span><span class="d on" title="Ср 7 окт — выполнено"></span><span class="d off" title="Чт 8 окт — пропущено"></span><span class="d off today" title="Пт 9 окт — сегодня"></span>
+          </div>
+        </div>
+        <div class="hb-side">
+          <span class="streak broke" title="Серия оборвалась 8 октября">0 · рек. 14</span>
+          <label class="check"><input type="checkbox" aria-label="Бег — выполнено сегодня"><span class="ring"></span></label>
+        </div>
+      </article>
+
+      <article class="habit">
+        <div class="chip" style="background:#F4EEDF">📚</div>
+        <div class="hb-main">
+          <div class="hb-name">Чтение</div>
+          <div class="hb-sub">20 страниц перед сном</div>
+          <div class="dots">
+            <span class="d off" title="Сб 3 окт — пропущено"></span><span class="d off" title="Вс 4 окт — пропущено"></span><span class="d on" title="Пн 5 окт — выполнено"></span><span class="d on" title="Вт 6 окт — выполнено"></span><span class="d on" title="Ср 7 окт — выполнено"></span><span class="d on" title="Чт 8 окт — выполнено"></span><span class="d off today" title="Пт 9 окт — сегодня"></span>
+          </div>
+        </div>
+        <div class="hb-side">
+          <span class="streak">🔥 4 дня</span>
+          <label class="check"><input type="checkbox" aria-label="Чтение — выполнено сегодня"><span class="ring"></span></label>
+        </div>
+      </article>
+
+      <article class="habit">
+        <div class="chip" style="background:#EBEFE4">🧘</div>
+        <div class="hb-main">
+          <div class="hb-name">Медитация</div>
+          <div class="hb-sub">10 минут, утром</div>
+          <div class="dots">
+            <span class="d on" title="Сб 3 окт — выполнено"></span><span class="d on" title="Вс 4 окт — выполнено"></span><span class="d on" title="Пн 5 окт — выполнено"></span><span class="d on" title="Вт 6 окт — выполнено"></span><span class="d on" title="Ср 7 окт — выполнено"></span><span class="d on" title="Чт 8 окт — выполнено"></span><span class="d on today" title="Пт 9 окт — сегодня, выполнено"></span>
+          </div>
+        </div>
+        <div class="hb-side">
+          <span class="streak">🔥 12 дней</span>
+          <label class="check"><input type="checkbox" checked aria-label="Медитация — выполнено сегодня"><span class="ring"></span></label>
+        </div>
+      </article>
+
+      <article class="habit">
+        <div class="chip" style="background:#F6E9E7">🌱</div>
+        <div class="hb-main">
+          <div class="hb-name">Без сахара</div>
+          <div class="hb-sub">день без сладкого и газировки</div>
+          <div class="dots">
+            <span class="d off" title="Сб 3 окт — пропущено"></span><span class="d off" title="Вс 4 окт — пропущено"></span><span class="d off" title="Пн 5 окт — пропущено"></span><span class="d off" title="Вт 6 окт — пропущено"></span><span class="d on" title="Ср 7 окт — выполнено"></span><span class="d on" title="Чт 8 окт — выполнено"></span><span class="d on today" title="Пт 9 окт — сегодня, выполнено"></span>
+          </div>
+        </div>
+        <div class="hb-side">
+          <span class="streak">🔥 3 дня</span>
+          <label class="check"><input type="checkbox" checked aria-label="Без сахара — выполнено сегодня"><span class="ring"></span></label>
+        </div>
+      </article>
+
+      <article class="habit">
+        <div class="chip" style="background:#EEEAF3">😴</div>
+        <div class="hb-main">
+          <div class="hb-name">Отбой до 23:00</div>
+          <div class="hb-sub">без экрана за час до сна</div>
+          <div class="dots">
+            <span class="d on" title="Сб 3 окт — выполнено"></span><span class="d on" title="Вс 4 окт — выполнено"></span><span class="d on" title="Пн 5 окт — выполнено"></span><span class="d on" title="Вт 6 окт — выполнено"></span><span class="d on" title="Ср 7 окт — выполнено"></span><span class="d off" title="Чт 8 окт — пропущено"></span><span class="d off today" title="Пт 9 окт — сегодня"></span>
+          </div>
+        </div>
+        <div class="hb-side">
+          <span class="streak broke" title="Серия оборвалась 8 октября">0 · рек. 9</span>
+          <label class="check"><input type="checkbox" aria-label="Отбой до 23:00 — выполнено сегодня"><span class="ring"></span></label>
+        </div>
+      </article>
+
+    </div>
+  </div>
+
+  <nav class="tabbar" aria-label="Основная навигация">
+    <button class="tab on">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M8 3.5v3M16 3.5v3M3.6 9.6h16.8"/><path d="M9.2 14.8l2.1 2.1 3.9-4.3"/></svg>
+      Сегодня
+    </button>
+    <button class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5.5 20v-6.5M12 20V5M18.5 20v-9.5"/></svg>
+      Статистика
+    </button>
+    <button class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="8.2" r="3.6"/><path d="M4.8 20.2c1.3-3.5 4-5.3 7.2-5.3s5.9 1.8 7.2 5.3"/></svg>
+      Профиль
+    </button>
+    <div class="home-bar" aria-hidden="true"></div>
+  </nav>
+</section>
+
+<!-- ================= ЭКРАН 2 · СТАТИСТИКА ================= -->
+<div class="sep" role="presentation">
+  <div class="sep-c">
+    <div class="sep-tag">Экран 2 · Статистика</div>
+    <div class="sep-note">серии · % выполнения · календарь месяца</div>
+  </div>
+</div>
+
+<section class="phone" aria-label="Экран 2 — Статистика">
+  <div class="island"></div>
+  <div class="status">
+    <span>9:41</span>
+    <span class="status-r" aria-hidden="true">
+      <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.3" y="5" width="3" height="6" rx="1"/><rect x="8.6" y="2.6" width="3" height="8.4" rx="1"/><rect x="12.9" y="0" width="3" height="11" rx="1"/></svg>
+      <svg width="15" height="11" viewBox="0 0 24 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M2 6.5C8 .8 16 .8 22 6.5"/><path d="M6 11c3.6-3.4 8.4-3.4 12 0"/><path d="M10 15.2c1.6-1.4 4.4-1.4 6 0"/></svg>
+      <svg width="23" height="11" viewBox="0 0 25 12" fill="none"><rect x=".8" y=".8" width="19.4" height="10.4" rx="3.2" stroke="currentColor" stroke-opacity=".45" stroke-width="1.4"/><rect x="2.8" y="2.8" width="12" height="7.2" rx="1.6" fill="currentColor"/><path d="M22.2 4v4a2.2 2.2 0 0 0 0-4z" fill="currentColor" fill-opacity=".45"/></svg>
+    </span>
+  </div>
+
+  <div class="scr">
+    <div class="scr-head">
+      <div class="eyebrow">Прогресс</div>
+      <h2 class="h-title" style="display:flex; justify-content:space-between; align-items:baseline;">
+        Статистика
+        <span class="month-nav"><span title="Предыдущий месяц">‹</span> <b>Октябрь</b> <span title="Следующий месяц">›</span></span>
+      </h2>
+    </div>
+
+    <div class="tiles">
+      <div class="tile">
+        <div class="tile-num">12<small>дней</small></div>
+        <div class="tile-lbl">текущая серия · медитация</div>
+      </div>
+      <div class="tile">
+        <div class="tile-num">21<small>день</small></div>
+        <div class="tile-lbl">рекорд серии · вода</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="card-t">Эта неделя</span>
+        <span class="card-a">77% выполнения</span>
+      </div>
+      <div class="bars" role="img" aria-label="Процент выполнения по дням недели: понедельник 83, вторник 83, среда 100, четверг 67, пятница 50, суббота и воскресенье — впереди">
+        <div class="bar"><span class="bar-v">83%</span><span class="bar-col" style="height:76%"></span><span class="bar-l">Пн</span></div>
+        <div class="bar"><span class="bar-v">83%</span><span class="bar-col" style="height:76%"></span><span class="bar-l">Вт</span></div>
+        <div class="bar"><span class="bar-v">100%</span><span class="bar-col" style="height:92%"></span><span class="bar-l">Ср</span></div>
+        <div class="bar"><span class="bar-v">67%</span><span class="bar-col" style="height:61%"></span><span class="bar-l">Чт</span></div>
+        <div class="bar now"><span class="bar-v">50%</span><span class="bar-col" style="height:46%"></span><span class="bar-l">Пт</span></div>
+        <div class="bar fut"><span class="bar-v"></span><span class="bar-col"></span><span class="bar-l">Сб</span></div>
+        <div class="bar fut"><span class="bar-v"></span><span class="bar-col"></span><span class="bar-l">Вс</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="card-t">Октябрь</span>
+        <span class="card-a">81% за месяц</span>
+      </div>
+      <div class="cal" role="img" aria-label="Календарь октября: дни отмечены точками по проценту выполнения">
+        <span class="cal-w">П</span><span class="cal-w">В</span><span class="cal-w">С</span><span class="cal-w">Ч</span><span class="cal-w">П</span><span class="cal-w">С</span><span class="cal-w">В</span>
+        <span class="cal-d"></span><span class="cal-d"></span><span class="cal-d"></span>
+        <span class="cal-d"><span class="cnum">1</span><span class="cdot full"></span></span>
+        <span class="cal-d"><span class="cnum">2</span><span class="cdot full"></span></span>
+        <span class="cal-d"><span class="cnum">3</span><span class="cdot part"></span></span>
+        <span class="cal-d"><span class="cnum">4</span><span class="cdot miss"></span></span>
+        <span class="cal-d"><span class="cnum">5</span><span class="cdot part"></span></span>
+        <span class="cal-d"><span class="cnum">6</span><span class="cdot part"></span></span>
+        <span class="cal-d"><span class="cnum">7</span><span class="cdot full"></span></span>
+        <span class="cal-d"><span class="cnum">8</span><span class="cdot part"></span></span>
+        <span class="cal-d today"><span class="cnum">9</span><span class="cdot part"></span></span>
+        <span class="cal-d dim"><span class="cnum">10</span></span>
+        <span class="cal-d dim"><span class="cnum">11</span></span>
+        <span class="cal-d dim"><span class="cnum">12</span></span>
+        <span class="cal-d dim"><span class="cnum">13</span></span>
+        <span class="cal-d dim"><span class="cnum">14</span></span>
+        <span class="cal-d dim"><span class="cnum">15</span></span>
+        <span class="cal-d dim"><span class="cnum">16</span></span>
+        <span class="cal-d dim"><span class="cnum">17</span></span>
+        <span class="cal-d dim"><span class="cnum">18</span></span>
+        <span class="cal-d dim"><span class="cnum">19</span></span>
+        <span class="cal-d dim"><span class="cnum">20</span></span>
+        <span class="cal-d dim"><span class="cnum">21</span></span>
+        <span class="cal-d dim"><span class="cnum">22</span></span>
+        <span class="cal-d dim"><span class="cnum">23</span></span>
+        <span class="cal-d dim"><span class="cnum">24</span></span>
+        <span class="cal-d dim"><span class="cnum">25</span></span>
+        <span class="cal-d dim"><span class="cnum">26</span></span>
+        <span class="cal-d dim"><span class="cnum">27</span></span>
+        <span class="cal-d dim"><span class="cnum">28</span></span>
+        <span class="cal-d dim"><span class="cnum">29</span></span>
+        <span class="cal-d dim"><span class="cnum">30</span></span>
+        <span class="cal-d dim"><span class="cnum">31</span></span>
+      </div>
+      <div class="legend">
+        <span><i class="cdot full" style="display:inline-block"></i>все привычки</span>
+        <span><i class="cdot part" style="display:inline-block"></i>частично</span>
+        <span><i class="cdot miss" style="display:inline-block"></i>пропуск</span>
+      </div>
+    </div>
+  </div>
+
+  <nav class="tabbar" aria-label="Основная навигация">
+    <button class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M8 3.5v3M16 3.5v3M3.6 9.6h16.8"/><path d="M9.2 14.8l2.1 2.1 3.9-4.3"/></svg>
+      Сегодня
+    </button>
+    <button class="tab on">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5.5 20v-6.5M12 20V5M18.5 20v-9.5"/></svg>
+      Статистика
+    </button>
+    <button class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="8.2" r="3.6"/><path d="M4.8 20.2c1.3-3.5 4-5.3 7.2-5.3s5.9 1.8 7.2 5.3"/></svg>
+      Профиль
+    </button>
+    <div class="home-bar" aria-hidden="true"></div>
+  </nav>
+</section>
+
+<!-- ================= ЭКРАН 3 · ПРОФИЛЬ / ПРИВЫЧКИ ================= -->
+<div class="sep" role="presentation">
+  <div class="sep-c">
+    <div class="sep-tag">Экран 3 · Профиль</div>
+    <div class="sep-note">все привычки · добавление · архив</div>
+  </div>
+</div>
+
+<section class="phone" aria-label="Экран 3 — Профиль и привычки">
+  <div class="island"></div>
+  <div class="status">
+    <span>9:41</span>
+    <span class="status-r" aria-hidden="true">
+      <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.3" y="5" width="3" height="6" rx="1"/><rect x="8.6" y="2.6" width="3" height="8.4" rx="1"/><rect x="12.9" y="0" width="3" height="11" rx="1"/></svg>
+      <svg width="15" height="11" viewBox="0 0 24 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M2 6.5C8 .8 16 .8 22 6.5"/><path d="M6 11c3.6-3.4 8.4-3.4 12 0"/><path d="M10 15.2c1.6-1.4 4.4-1.4 6 0"/></svg>
+      <svg width="23" height="11" viewBox="0 0 25 12" fill="none"><rect x=".8" y=".8" width="19.4" height="10.4" rx="3.2" stroke="currentColor" stroke-opacity=".45" stroke-width="1.4"/><rect x="2.8" y="2.8" width="12" height="7.2" rx="1.6" fill="currentColor"/><path d="M22.2 4v4a2.2 2.2 0 0 0 0-4z" fill="currentColor" fill-opacity=".45"/></svg>
+    </span>
+  </div>
+
+  <div class="scr">
+    <div class="scr-head">
+      <div class="eyebrow">Профиль</div>
+      <h2 class="h-title">Мой трекер</h2>
+    </div>
+
+    <div class="me">
+      <div class="avatar">АС</div>
+      <div>
+        <div class="me-name">Аня Соколова</div>
+        <div class="me-sub">6 активных привычек · ведёт с 1 сентября</div>
+      </div>
+    </div>
+
+    <div class="sec"><span class="eyebrow">Активные привычки</span><span class="sec-r">6</span></div>
+    <div class="rows">
+      <div class="row" title="Открыть привычку">
+        <div class="chip-s" style="background:#E8F0F5">💧</div>
+        <div><div class="row-name">Вода</div><div class="row-sub">ежедневно · 8 стаканов</div></div>
+        <span class="row-meta"><b>🔥 21</b> · рекорд</span><span class="chev">›</span>
+      </div>
+      <div class="row">
+        <div class="chip-s" style="background:#F6EDE3">🏃</div>
+        <div><div class="row-name">Бег</div><div class="row-sub">пн · ср · пт · сб</div></div>
+        <span class="row-meta">серия 0 · рек. 14</span><span class="chev">›</span>
+      </div>
+      <div class="row">
+        <div class="chip-s" style="background:#F4EEDF">📚</div>
+        <div><div class="row-name">Чтение</div><div class="row-sub">ежедневно · 20 страниц</div></div>
+        <span class="row-meta"><b>🔥 4</b></span><span class="chev">›</span>
+      </div>
+      <div class="row">
+        <div class="chip-s" style="background:#EBEFE4">🧘</div>
+        <div><div class="row-name">Медитация</div><div class="row-sub">ежедневно · 10 минут</div></div>
+        <span class="row-meta"><b>🔥 12</b></span><span class="chev">›</span>
+      </div>
+      <div class="row">
+        <div class="chip-s" style="background:#F6E9E7">🌱</div>
+        <div><div class="row-name">Без сахара</div><div class="row-sub">ежедневно</div></div>
+        <span class="row-meta"><b>🔥 3</b></span><span class="chev">›</span>
+      </div>
+      <div class="row">
+        <div class="chip-s" style="background:#EEEAF3">😴</div>
+        <div><div class="row-name">Отбой до 23:00</div><div class="row-sub">ежедневно</div></div>
+        <span class="row-meta">серия 0 · рек. 9</span><span class="chev">›</span>
+      </div>
+    </div>
+
+    <div class="sec"><span class="eyebrow">Архив</span><span class="sec-r">1</span></div>
+    <div class="rows">
+      <div class="row arch">
+        <div class="chip-s" style="background:#F1EDE4">🚭</div>
+        <div><div class="row-name">Без сигарет</div><div class="row-sub">в архиве с августа · рекорд 48 дней</div></div>
+        <span class="restore" title="Вернуть привычку в активные">Восстановить</span>
+      </div>
+    </div>
+
+    <div class="add" role="button" tabindex="0" aria-label="Добавить привычку">
+      <span class="add-plus">+</span>
+      <span>
+        <span class="add-t" style="display:block">Новая привычка</span>
+        <span class="add-s">название, эмодзи и цвет</span>
+      </span>
+    </div>
+
+    <div class="sync">
+      <span aria-hidden="true">☁️</span>
+      <span><b>Аккаунт и синхронизация</b> появятся на следующем этапе (ДЗ5) — сейчас данные хранятся на устройстве.</span>
+    </div>
+  </div>
+
+  <nav class="tabbar" aria-label="Основная навигация">
+    <button class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M8 3.5v3M16 3.5v3M3.6 9.6h16.8"/><path d="M9.2 14.8l2.1 2.1 3.9-4.3"/></svg>
+      Сегодня
+    </button>
+    <button class="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5.5 20v-6.5M12 20V5M18.5 20v-9.5"/></svg>
+      Статистика
+    </button>
+    <button class="tab on">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="8.2" r="3.6"/><path d="M4.8 20.2c1.3-3.5 4-5.3 7.2-5.3s5.9 1.8 7.2 5.3"/></svg>
+      Профиль
+    </button>
+    <div class="home-bar" aria-hidden="true"></div>
+  </nav>
+</section>
+
+<footer class="foot">
+  Концепция №1 из 3 · «Спокойный минимализм» · ширина кадра 390 px · один файл, без внешних зависимостей<br>
+  Чекбоксы на «Сегодня» кликабельны — счётчик и полоса дня пересчитываются
+</footer>
+
+<script>
+  (function(){
+    var boxes = document.querySelectorAll('.js-day input[type="checkbox"]');
+    var count = document.getElementById('dayCount');
+    var bar   = document.getElementById('dayBar');
+    if(!boxes.length || !count || !bar) return;
+    function upd(){
+      var n = 0;
+      boxes.forEach(function(b){
+        if(b.checked) n++;
+        var today = b.closest('.habit').querySelector('.d.today');
+        if(today) today.classList.toggle('on', b.checked);
+      });
+      count.textContent = n + ' из ' + boxes.length;
+      bar.style.width = (n / boxes.length * 100) + '%';
+    }
+    boxes.forEach(function(b){ b.addEventListener('change', upd); });
+  })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Трекер привычек — Концепция №3 «Функциональный дашборд»</title>
+<style>
+  :root{
+    --page:#07090d;
+    --bg:#0f1218;          /* фон телефона */
+    --rail:#0c0f14;        /* боковое меню */
+    --card:#161b23;        /* карточки */
+    --card2:#10151c;       /* вложенные элементы */
+    --line:#242b37;
+    --line2:#1a2029;
+    --tx:#e8edf4;
+    --tx2:#98a3b3;
+    --tx3:#5d6878;
+    --acc:#4d8dff;
+    --acc-deep:#2f6fe0;
+    --acc-soft:rgba(77,141,255,.12);
+    --ok:#34d399;
+    --bad:#f87171;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--page);
+    background-image:radial-gradient(1100px 500px at 50% -8%, #0c1320 0%, transparent 70%);
+    color:var(--tx);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-size:12px;line-height:1.45;
+    padding:34px 16px 60px;
+  }
+  .page{max-width:620px;margin:0 auto}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ---------- страница-подложка ---------- */
+  .p-head{text-align:center;margin-bottom:6px}
+  .eyebrow{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--acc)}
+  .p-head h1{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-top:6px}
+  .p-sub{font-size:11.5px;color:var(--tx3);margin-top:5px}
+  .plg{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin:14px 0 4px;font-size:10px;color:var(--tx3)}
+  .plg span{display:inline-flex;align-items:center;gap:5px}
+  .pfoot{text-align:center;font-size:10px;color:#39424e;margin-top:38px;line-height:1.7}
+
+  .sep{display:flex;align-items:center;gap:12px;margin:44px 0 0}
+  .sep::before,.sep::after{content:"";flex:1;height:1px}
+  .sep::before{background:linear-gradient(90deg,transparent,#28303d)}
+  .sep::after{background:linear-gradient(90deg,#28303d,transparent)}
+  .sep-tag{font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--tx2);
+    border:1px solid var(--line);background:#0d1016;border-radius:999px;padding:5px 12px;white-space:nowrap}
+  .sep-tag b{color:var(--acc);font-weight:700}
+  .sep-desc{text-align:center;font-size:11px;color:var(--tx3);margin:9px 0 14px}
+
+  /* ---------- телефон ---------- */
+  .frame{
+    width:min(390px,100%);margin:0 auto;background:var(--bg);
+    border:1px solid #232a36;border-radius:26px;overflow:hidden;
+    box-shadow:0 34px 90px -24px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.03);
+  }
+  .statusbar{display:flex;justify-content:space-between;align-items:center;padding:11px 20px 7px;
+    font-size:11px;font-weight:700;color:var(--tx)}
+  .sb-r{display:flex;gap:6px;align-items:center;color:#9aa5b4}
+  .app{display:flex;min-height:660px}
+
+  /* боковое меню-иконки */
+  .rail{width:46px;flex:none;background:var(--rail);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:4px}
+  .logo{width:26px;height:26px;border-radius:8px;background:var(--acc-deep);color:#fff;
+    display:grid;place-items:center;font-weight:800;font-size:13px;margin-bottom:10px}
+  .ri{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:var(--tx3);
+    position:relative;cursor:pointer;transition:background .15s,color .15s}
+  .ri:hover{color:var(--tx2);background:#151a22}
+  .ri.on{color:var(--acc);background:var(--acc-soft)}
+  .ri.on::before{content:"";position:absolute;left:-6px;top:9px;bottom:9px;width:2px;border-radius:2px;background:var(--acc)}
+  .rail .sp{flex:1}
+  .ava-s{width:28px;height:28px;border-radius:50%;background:#232b38;color:var(--tx2);
+    font-size:9px;font-weight:700;display:grid;place-items:center;letter-spacing:.03em}
+
+  .content{flex:1;min-width:0;padding:12px;display:flex;flex-direction:column;gap:10px}
+
+  /* заголовок экрана */
+  .scr-h{display:flex;align-items:flex-start;gap:8px}
+  .h-date{font-size:15.5px;font-weight:800;letter-spacing:-.01em}
+  .h-sub{font-size:10px;color:var(--tx3);margin-top:2px}
+  .icobtn{margin-left:auto;width:27px;height:27px;border-radius:8px;border:1px solid var(--line);
+    background:var(--card2);display:grid;place-items:center;color:var(--tx3);cursor:pointer;transition:.15s}
+  .icobtn:hover{color:var(--acc);border-color:#33405a}
+
+  /* компактные метрики */
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  .tile{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 10px 8px}
+  .tile .v{font-size:17px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+  .tile .v .u{font-size:9.5px;font-weight:600;color:var(--tx3);margin-left:2px}
+  .tile .l{font-size:8.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--tx3);margin-top:4px}
+  .tile .c{font-size:9px;color:var(--tx3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tile.hl .v{color:var(--acc)}
+
+  /* карточки */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 11px}
+  .card-h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:7px}
+  .card-t{font-size:11.5px;font-weight:700}
+  .card-s{font-size:9px;color:var(--tx3)}
+
+  /* ---------- матрица недели ---------- */
+  .lg-i{display:inline-flex;align-items:center;gap:4px;font-size:8.5px;color:var(--tx3)}
+  .mx-row{display:grid;grid-template-columns:minmax(0,1fr) repeat(7,24px);align-items:center}
+  .mx-row + .mx-row{border-top:1px solid var(--line2)}
+  .mx-name{display:flex;align-items:center;gap:6px;min-width:0;padding:7px 6px 7px 0}
+  .mx-name .e{font-size:13px;line-height:1;flex:none}
+  .mx-name .n{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stk{flex:none;font-size:8.5px;font-weight:700;color:var(--tx3);background:var(--card2);
+    border:1px solid var(--line);border-radius:5px;padding:1px 4px}
+  .stk.rec{color:var(--acc);border-color:rgba(77,141,255,.45)}
+  .stk.zero{color:var(--bad);opacity:.85}
+  .mx-cell{display:flex;justify-content:center}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .dot.d{background:var(--acc)}
+  .dot.m{width:8px;height:8px;background:transparent;box-shadow:inset 0 0 0 2px #333d4c}
+  .dot.f{width:4px;height:4px;background:#232b38}
+  .ct{background:rgba(77,141,255,.055)}
+  .mx-head .mx-d{font-size:8.5px;font-weight:700;letter-spacing:.05em;color:var(--tx3);text-align:center;padding:4px 0;border-radius:6px 6px 0 0}
+  .mx-head .mx-d.ct{color:var(--acc)}
+  .mx-row.tot{border-top:1px solid var(--line)}
+  .tot .tv{font-size:8.5px;font-weight:600;color:var(--tx2);text-align:center;padding:6px 0;border-radius:0 0 6px 6px}
+  .tot .tl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3)}
+
+  /* тапабельная отметка «сегодня» */
+  .tap input{position:absolute;opacity:0;pointer-events:none}
+  .tap .btn{width:22px;height:22px;border-radius:7px;border:1.5px solid #384253;background:transparent;
+    display:grid;place-items:center;font-size:11px;font-weight:800;color:transparent;cursor:pointer;
+    transition:background .15s,border-color .15s,color .15s;user-select:none}
+  .tap .btn:hover{border-color:var(--acc);background:var(--acc-soft);color:rgba(122,166,255,.55)}
+  .tap input:checked + .btn{background:var(--acc);border-color:var(--acc);color:#fff}
+  .tap input:focus-visible + .btn{outline:2px solid var(--acc);outline-offset:2px}
+  .tap input:not(:checked) + .btn{border-style:dashed}
+
+  /* прогресс дня */
+  .dpr{display:flex;align-items:center;gap:10px}
+  .bar{flex:1;height:6px;border-radius:3px;background:#1d242f;overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:3px;background:var(--acc)}
+  .dpr .n{font-size:11px;font-weight:800;white-space:nowrap}
+  .dpr .n span{color:var(--tx3);font-weight:600}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:var(--tx2);
+    background:var(--card2);border:1px dashed #2c3644;border-radius:7px;padding:4.5px 9px;cursor:pointer;transition:.15s}
+  .chip:hover{border-color:var(--acc);border-style:solid;color:var(--tx)}
+  .chip b{color:var(--acc);font-weight:800}
+  .fnote{display:flex;align-items:center;gap:6px;font-size:9.5px;color:var(--tx3);margin-top:2px}
+  .fnote .up{color:var(--ok);font-size:8px}
+
+  /* ---------- статистика ---------- */
+  .period input{position:absolute;opacity:0;pointer-events:none}
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:3px;background:var(--card2);
+    border:1px solid var(--line);border-radius:9px;padding:3px}
+  .seg label{font-size:10.5px;font-weight:700;color:var(--tx3);text-align:center;padding:5.5px 0;
+    border-radius:6px;cursor:pointer;transition:.15s}
+  .seg label:hover{color:var(--tx2)}
+  #p-week:checked ~ .seg label[for=p-week],
+  #p-month:checked ~ .seg label[for=p-month]{background:#20325a;color:#dce8ff}
+  .pb{display:none}
+  #p-week:checked ~ .pblocks .pb-w{display:block}
+  #p-month:checked ~ .pblocks .pb-m{display:block}
+  .sum{display:flex;justify-content:space-between;align-items:baseline;font-size:10px;color:var(--tx2);margin-bottom:6px}
+  .sum b{font-size:11px;color:var(--tx)}
+  .hr{display:grid;grid-template-columns:15px minmax(0,1fr) 72px 30px;gap:8px;align-items:center;padding:5.5px 0}
+  .hr + .hr{border-top:1px solid var(--line2)}
+  .hr .e{font-size:12px;line-height:1}
+  .hr .n{font-size:10.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hr .n i{font-style:normal;color:var(--tx3);font-size:9px;font-weight:500}
+  .hr .p{font-size:10.5px;font-weight:800;text-align:right}
+  .hr .bar{height:5px}
+
+  /* календарь месяца */
+  .cal-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .cal-m{font-size:11.5px;font-weight:700}
+  .cnav{color:var(--tx3);cursor:pointer;font-size:14px;line-height:1;padding:3px 8px;border-radius:6px;transition:.15s}
+  .cnav:hover{color:var(--acc);background:var(--acc-soft)}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+  .cwd{font-size:8px;font-weight:700;letter-spacing:.05em;color:var(--tx3);text-align:center;padding:2px 0}
+  .cc{aspect-ratio:1/.95;border-radius:6px;background:#131824;border:1px solid transparent;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+  .cc .d{font-size:9.5px;font-weight:600;color:var(--tx2)}
+  .cc .r{font-size:7.5px;color:var(--tx3)}
+  .cc.off{background:transparent}
+  .cc.off .d{color:#222a37}
+  .cc.l1{background:rgba(77,141,255,.13)}
+  .cc.l2{background:rgba(77,141,255,.24)}
+  .cc.l3{background:rgba(77,141,255,.4)}
+  .cc.l2 .d,.cc.l2 .r,.cc.l1 .d,.cc.l1 .r{color:#c6d6f5}
+  .cc.l3 .d{color:#eaf1ff}.cc.l3 .r{color:#b9ccf0}
+  .cc.l4{background:var(--acc);border-color:#7db0ff}
+  .cc.l4 .d{color:#fff}.cc.l4 .r{color:rgba(255,255,255,.78)}
+  .cc.fut{background:transparent}
+  .cc.fut .d{color:#333d4b}
+  .cc.tdy{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+  .cal-lg{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:8.5px;color:var(--tx3)}
+  .lgs{display:inline-flex;gap:3px;align-items:center}
+  .lgsq{width:9px;height:9px;border-radius:3px;display:inline-block}
+  .recs{display:flex;gap:6px;flex-wrap:wrap}
+  .rec{font-size:9.5px;color:var(--tx2);background:var(--card);border:1px solid var(--line);
+    border-radius:999px;padding:4.5px 10px}
+  .rec b{color:var(--tx);font-weight:800}
+
+  /* ---------- профиль / привычки ---------- */
+  .account{display:flex;align-items:center;gap:10px}
+  .ava{width:38px;height:38px;flex:none;border-radius:11px;background:#22375f;color:#cfe0ff;
+    font-size:13px;font-weight:800;display:grid;place-items:center;letter-spacing:.03em}
+  .a-n{font-size:13px;font-weight:800}
+  .a-e{font-size:10px;color:var(--tx3);margin-top:1px}
+  .sync{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700;
+    color:var(--ok);background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.28);
+    border-radius:999px;padding:4px 9px;white-space:nowrap}
+  .sync .sd{width:5px;height:5px;border-radius:50%;background:var(--ok)}
+  .asub{font-size:9px;color:var(--tx3);margin-top:8px}
+  .sec{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);
+    padding:2px 2px 0}
+  .li{display:flex;align-items:center;gap:9px;padding:8px 6px;margin:0 -6px;border-radius:9px;cursor:pointer;transition:background .15s}
+  .li:first-child{border-top:none}
+  .li:hover{background:rgba(77,141,255,.05)}
+  .et{width:30px;height:30px;flex:none;border-radius:8px;display:grid;place-items:center;font-size:14px}
+  .li .t{font-size:11.5px;font-weight:700}
+  .li .s{font-size:9px;color:var(--tx3);margin-top:1px}
+  .li-r{margin-left:auto;text-align:right;flex:none}
+  .li-stk{font-size:10.5px;font-weight:800}
+  .li-stk i{font-style:normal;color:var(--tx3);font-weight:600;font-size:9px}
+  .li-pct{font-size:8.5px;color:var(--tx3);margin-top:1px}
+  .chev{color:#39424e;flex:none}
+  .li.arc{opacity:.6}
+  .li.arc:hover{opacity:1}
+  .badge-arc{font-size:8.5px;font-weight:600;color:var(--tx3);border:1px solid var(--line);
+    border-radius:5px;padding:2px 5px;flex:none}
+  .restore{flex:none;font-size:9.5px;font-weight:700;color:var(--acc);background:var(--acc-soft);
+    border:1px solid rgba(77,141,255,.32);border-radius:7px;padding:5px 10px;cursor:pointer;transition:.15s}
+  .restore:hover{background:rgba(77,141,255,.22)}
+  .add{display:flex;align-items:center;justify-content:center;gap:7px;height:41px;border-radius:11px;
+    background:var(--acc);color:#fff;font-size:12px;font-weight:800;cursor:pointer;
+    box-shadow:0 8px 20px -8px rgba(77,141,255,.55);transition:background .15s;margin-top:2px}
+  .add:hover{background:#5e98ff}
+  .add .pl{font-size:15px;font-weight:800;line-height:1;margin-top:-1px}
+  .si{width:28px;height:28px;flex:none;border-radius:8px;background:var(--card2);border:1px solid var(--line);
+    display:grid;place-items:center;color:var(--tx3)}
+  .li:hover .si{color:var(--tx2)}
+
+  @media (max-width:430px){
+    .frame{border-radius:18px}
+    body{padding:22px 10px 44px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ============ шапка страницы-подложки ============ -->
+  <header class="p-head">
+    <div class="eyebrow">ДЗ3 · Трекер привычек · UI-концепция №3</div>
+    <h1>Функциональный дашборд</h1>
+    <p class="p-sub">Графит + синий акцент · плотная сетка данных · максимум информации, минимум украшений</p>
+    <div class="plg">
+      <span><i class="dot d" style="display:inline-block"></i> выполнено</span>
+      <span><i class="dot m" style="display:inline-block"></i> пропуск</span>
+      <span><i class="dot f" style="display:inline-block"></i> план</span>
+      <span>клетка «сегодня» кликабельна</span>
+    </div>
+  </header>
+
+  <!-- ================================================== -->
+  <div class="sep"><span class="sep-tag">Экран 1: <b>Сегодня</b></span></div>
+  <p class="sep-desc">Неделя одним взглядом: матрица «привычки × дни», отметка в один тап, метрики в шапке</p>
+
+  <div class="frame">
+    <div class="statusbar">
+      <span class="num">9:41</span>
+      <span class="sb-r">
+        <svg width="15" height="10" viewBox="0 0 16 11" fill="currentColor" aria-hidden="true"><rect x="0" y="7" width="2.6" height="4" rx="0.8"/><rect x="4.4" y="4.6" width="2.6" height="6.4" rx="0.8"/><rect x="8.8" y="2.3" width="2.6" height="8.7" rx="0.8"/><rect x="13.2" y="0" width="2.6" height="11" rx="0.8"/></svg>
+        <svg width="21" height="11" viewBox="0 0 24 12" aria-hidden="true"><rect x="1" y="1" width="19" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="3" y="3" width="11.5" height="6" rx="1.5" fill="currentColor"/><rect x="21.6" y="4" width="1.8" height="4" rx="0.9" fill="currentColor"/></svg>
+      </span>
+    </div>
+    <div class="app">
+      <aside class="rail" aria-label="Меню">
+        <div class="logo">✓</div>
+        <div class="ri on" title="Сегодня">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3.5"/><path d="M8.5 12.4l2.6 2.6 4.6-5.6"/></svg>
+        </div>
+        <div class="ri" title="Статистика">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 19v-8"/><path d="M12 19V5"/><path d="M19 19v-5"/></svg>
+        </div>
+        <div class="ri" title="Привычки">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="5" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="5" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </div>
+        <div class="sp"></div>
+        <div class="ava-s" title="Профиль">АС</div>
+      </aside>
+
+      <main class="content">
+        <div class="scr-h">
+          <div>
+            <div class="h-date">Пятница, 9 октября</div>
+            <div class="h-sub num">41-я неделя · 6 привычек · 4 отмечено</div>
+          </div>
+          <div class="icobtn" title="Синхронизировать">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.6-3.4M4 13a8 8 0 0 0 14.6 3.4"/><path d="M5.5 3v4.6h4.6M18.5 21v-4.6h-4.6"/></svg>
+          </div>
+        </div>
+
+        <div class="tiles">
+          <div class="tile hl">
+            <div class="v num">27<span class="u">дн</span></div>
+            <div class="l">Серия</div>
+            <div class="c">📚 Чтение · рекорд</div>
+          </div>
+          <div class="tile">
+            <div class="v num">80<span class="u">%</span></div>
+            <div class="l">Неделя</div>
+            <div class="c num">24 из 30 отметок</div>
+          </div>
+          <div class="tile">
+            <div class="v num">342</div>
+            <div class="l">Отметок</div>
+            <div class="c num">с 1 сентября</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <span class="card-t">Матрица недели</span>
+            <span style="display:flex;gap:9px">
+              <span class="lg-i"><i class="dot d" style="display:inline-block"></i>да</span>
+              <span class="lg-i"><i class="dot m" style="display:inline-block"></i>пропуск</span>
+              <span class="lg-i"><i class="dot f" style="display:inline-block"></i>план</span>
+            </span>
+          </div>
+
+          <div class="mx">
+            <div class="mx-row mx-head">
+              <div class="mx-name" style="padding:0 6px 4px 0"><span class="tl" style="font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Привычка</span></div>
+              <div class="mx-d">Пн</div><div class="mx-d">Вт</div><div class="mx-d">Ср</div><div class="mx-d">Чт</div>
+              <div class="mx-d ct num">Пт·9</div><div class="mx-d">Сб</div><div class="mx-d">Вс</div>
+            </div>
+
+            <div class="mx-row">
+              <div class="mx-name"><span class="e">💧</span><span class="n">Вода 2 л</span><span class="stk num">×12</span></div>
+              <div class="mx-cell"><i class="dot d"></i></div><div class="mx-cell"><i class="dot d"></i></div><div class="mx-cell"><i class="dot d"></i></div><div class="mx-cell"><i class="dot d"></i></div>
+              <div class="mx-cell ct"><label class="tap"><input type="checkbox" checked aria-label="Вода 2 л — отметить сегодня"><span class="btn">✓</span></label></div>
+              <div class="mx-cell"><i class="dot f"></i></div><div class="mx-cell"><i class="dot f"></i></div>
+            </div>
+
+            <div class="mx-row">
+              <div class="mx-name"><span class="e">📚</span><span class="n">Чтение 30 мин</span><span class="stk rec num">×27</span></div>
+              <div class="mx-cell"><i class="dot d"></i></div><div class="mx-cell"><i class="dot d"></i></div><div class="mx-cell"><i class="dot d"></i></div><div class="mx-cell"><i class="dot d"></i></div>
+              <div class="mx-cell ct"><label class="tap"><input type="checkbox" checked aria-label="Чтение — отметить сегодня"><span class="btn">✓</span></label></div>
+              <div class="mx-cell"><i class="dot f"></i></div><div class="mx-cell"><i class="dot f"></i></div>
+            </div>
+
+            <div class="mx-row">
+              <div class="mx-name"><span class="e">🎧</span><span class="n">Английский 15 мин</span><span class="stk num">×7</span></div>
+              <div class="mx-cell"><i class="dot d"></i></div><div class="mx-cell"><i class="dot d"></i></div><div class="mx-cell"><i class="dot d"></i></div><div class="mx-cell"><i class="dot d"></i></div>
+              <div class="mx-cell ct"><label class="tap"><input type="checkbox" checked aria-label="Английский — отметить сегодня"><span class="btn">✓</span></label></div>
+              <div class="mx-cell"><i class="dot f"></i></div><div class="mx-cell"><i class="dot f"></i></div>
+            </div>
+
+            <div class="mx-row">
+              <div class="mx-name"><span class="e">🏃</span><span class="n">Бег 3 км</span><span class="stk num">×3</span></div>
+              <div class="mx-cell"><i class="dot d"></i></div><div class="mx-cell"><i class="dot m"></i></div><div class="mx-cell"><i class="dot d"></i></div><div class="mx-cell"><i class="dot d"></i></div>
+              <div class="mx-cell ct"><label class="tap"><input type="checkbox" checked aria-label="Бег — отметить сегодня"><span class="btn">✓</span></label></div>
+              <div class="mx-cell"><i class="dot f"></i></div><div class="mx-cell"><i class="dot f"></i></div>
+            </div>
+
+            <div class="mx-row">
+              <div class="mx-name"><span class="e">🧘</span><span class="n">Медитация</span><span class="stk zero num">×0</span></div>
+              <div class="mx-cell"><i class="dot d"></i></div><div class="mx-cell"><i class="dot d"></i></div><div class="mx-cell"><i class="dot d"></i></div><div class="mx-cell"><i class="dot m"></i></div>
+              <div class="mx-cell ct"><label class="tap"><input type="checkbox" aria-label="Медитация — отметить сегодня"><span class="btn">✓</span></label></div>
+              <div class="mx-cell"><i class="dot f"></i></div><div class="mx-cell"><i class="dot f"></i></div>
+            </div>
+
+            <div class="mx-row">
+              <div class="mx-name"><span class="e">💪</span><span class="n">Силовая</span><span class="stk num">×1</span></div>
+              <div class="mx-cell"><i class="dot d"></i></div><div class="mx-cell"><i class="dot m"></i></div><div class="mx-cell"><i class="dot m"></i></div><div class="mx-cell"><i class="dot d"></i></div>
+              <div class="mx-cell ct"><label class="tap"><input type="checkbox" aria-label="Силовая — отметить сегодня"><span class="btn">✓</span></label></div>
+              <div class="mx-cell"><i class="dot f"></i></div><div class="mx-cell"><i class="dot f"></i></div>
+            </div>
+
+            <div class="mx-row tot">
+              <div class="mx-name" style="padding:6px 6px 6px 0"><span class="tl">Итого / день</span></div>
+              <div class="tv num">6/6</div><div class="tv num">4/6</div><div class="tv num">5/6</div><div class="tv num">5/6</div>
+              <div class="tv ct num" style="font-weight:800;color:var(--acc)">4/6</div><div class="tv">—</div><div class="tv">—</div>
+            </div>
+          </div>
+
+          <div class="fnote" style="margin-top:8px">
+            <span class="up">▲</span> Лучший день недели — понедельник (6/6) · слабый — вторник (4/6)
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h" style="margin-bottom:6px">
+            <span class="card-t">Прогресс дня</span>
+            <span class="card-s num">обновлено 09:41</span>
+          </div>
+          <div class="dpr">
+            <div class="bar"><i style="width:67%"></i></div>
+            <div class="n num">4<span> / 6 · 67%</span></div>
+          </div>
+          <div class="chips">
+            <span class="chip"><b>+</b> 🧘 Медитация</span>
+            <span class="chip"><b>+</b> 💪 Силовая</span>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ================================================== -->
+  <div class="sep"><span class="sep-tag">Экран 2: <b>Статистика</b></span></div>
+  <p class="sep-desc">Серии и проценты, календарь месяца с интенсивностью, разбивка по привычкам</p>
+
+  <div class="frame">
+    <div class="statusbar">
+      <span class="num">9:41</span>
+      <span class="sb-r">
+        <svg width="15" height="10" viewBox="0 0 16 11" fill="currentColor" aria-hidden="true"><rect x="0" y="7" width="2.6" height="4" rx="0.8"/><rect x="4.4" y="4.6" width="2.6" height="6.4" rx="0.8"/><rect x="8.8" y="2.3" width="2.6" height="8.7" rx="0.8"/><rect x="13.2" y="0" width="2.6" height="11" rx="0.8"/></svg>
+        <svg width="21" height="11" viewBox="0 0 24 12" aria-hidden="true"><rect x="1" y="1" width="19" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="3" y="3" width="11.5" height="6" rx="1.5" fill="currentColor"/><rect x="21.6" y="4" width="1.8" height="4" rx="0.9" fill="currentColor"/></svg>
+      </span>
+    </div>
+    <div class="app">
+      <aside class="rail" aria-label="Меню">
+        <div class="logo">✓</div>
+        <div class="ri" title="Сегодня">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3.5"/><path d="M8.5 12.4l2.6 2.6 4.6-5.6"/></svg>
+        </div>
+        <div class="ri on" title="Статистика">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 19v-8"/><path d="M12 19V5"/><path d="M19 19v-5"/></svg>
+        </div>
+        <div class="ri" title="Привычки">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="5" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="5" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </div>
+        <div class="sp"></div>
+        <div class="ava-s" title="Профиль">АС</div>
+      </aside>
+
+      <main class="content">
+        <div class="scr-h">
+          <div>
+            <div class="h-date">Статистика</div>
+            <div class="h-sub num">октябрь 2026 · скользящее окно 30 дней</div>
+          </div>
+          <div class="icobtn" title="Настройки отчёта">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="var(--card)"/><circle cx="15" cy="12" r="2" fill="var(--card)"/><circle cx="7" cy="17" r="2" fill="var(--card)"/></svg>
+          </div>
+        </div>
+
+        <div class="tiles">
+          <div class="tile hl">
+            <div class="v num">27<span class="u">дн</span></div>
+            <div class="l">Серия сейчас</div>
+            <div class="c">📚 Чтение</div>
+          </div>
+          <div class="tile">
+            <div class="v num">41<span class="u">дн</span></div>
+            <div class="l">Лучшая серия</div>
+            <div class="c">рекорд · февраль</div>
+          </div>
+          <div class="tile">
+            <div class="v num">151</div>
+            <div class="l">Отметок · 30 дн</div>
+            <div class="c num">84% выполнение</div>
+          </div>
+        </div>
+
+        <div class="period">
+          <input type="radio" name="period" id="p-week">
+          <input type="radio" name="period" id="p-month" checked>
+          <div class="seg">
+            <label for="p-week">Неделя</label>
+            <label for="p-month">Месяц</label>
+          </div>
+
+          <div class="pblocks">
+            <div class="card pb pb-w" style="margin-top:10px">
+              <div class="sum num"><b>Текущая неделя · 24/30</b><span>80%</span></div>
+              <div class="bar" style="height:7px"><i style="width:80%"></i></div>
+              <div style="margin-top:6px">
+                <div class="hr"><span class="e">💧</span><span class="n">Вода 2 л <i>· 5/5</i></span><span class="bar"><i style="width:100%"></i></span><span class="p num">100%</span></div>
+                <div class="hr"><span class="e">📚</span><span class="n">Чтение <i>· 5/5</i></span><span class="bar"><i style="width:100%"></i></span><span class="p num">100%</span></div>
+                <div class="hr"><span class="e">🎧</span><span class="n">Английский <i>· 5/5</i></span><span class="bar"><i style="width:100%"></i></span><span class="p num">100%</span></div>
+                <div class="hr"><span class="e">🏃</span><span class="n">Бег <i>· 4/5</i></span><span class="bar"><i style="width:80%"></i></span><span class="p num">80%</span></div>
+                <div class="hr"><span class="e">🧘</span><span class="n">Медитация <i>· 3/5</i></span><span class="bar"><i style="width:60%"></i></span><span class="p num">60%</span></div>
+                <div class="hr"><span class="e">💪</span><span class="n">Силовая <i>· 2/5</i></span><span class="bar"><i style="width:40%"></i></span><span class="p num">40%</span></div>
+              </div>
+            </div>
+
+            <div class="card pb pb-m" style="margin-top:10px">
+              <div class="sum num"><b>Скользящие 30 дней · 151/180</b><span>84%</span></div>
+              <div class="bar" style="height:7px"><i style="width:84%"></i></div>
+              <div style="margin-top:6px">
+                <div class="hr"><span class="e">📚</span><span class="n">Чтение <i>· 30/30</i></span><span class="bar"><i style="width:100%"></i></span><span class="p num">100%</span></div>
+                <div class="hr"><span class="e">💧</span><span class="n">Вода 2 л <i>· 29/30</i></span><span class="bar"><i style="width:97%"></i></span><span class="p num">97%</span></div>
+                <div class="hr"><span class="e">🎧</span><span class="n">Английский <i>· 28/30</i></span><span class="bar"><i style="width:93%"></i></span><span class="p num">93%</span></div>
+                <div class="hr"><span class="e">🧘</span><span class="n">Медитация <i>· 23/30</i></span><span class="bar"><i style="width:77%"></i></span><span class="p num">77%</span></div>
+                <div class="hr"><span class="e">🏃</span><span class="n">Бег <i>· 21/30</i></span><span class="bar"><i style="width:70%"></i></span><span class="p num">70%</span></div>
+                <div class="hr"><span class="e">💪</span><span class="n">Силовая <i>· 20/30</i></span><span class="bar"><i style="width:67%"></i></span><span class="p num">67%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="cal-h">
+            <span class="cnav" title="Сентябрь">‹</span>
+            <span class="cal-m num">Октябрь 2026</span>
+            <span class="cnav" title="Ноябрь">›</span>
+          </div>
+          <div class="cal">
+            <span class="cwd">ПН</span><span class="cwd">ВТ</span><span class="cwd">СР</span><span class="cwd">ЧТ</span><span class="cwd">ПТ</span><span class="cwd">СБ</span><span class="cwd">ВС</span>
+            <div class="cc off"><span class="d num">·</span></div><div class="cc off"><span class="d num">·</span></div><div class="cc off"><span class="d num">·</span></div>
+            <div class="cc l2"><span class="d num">1</span><span class="r num">4/6</span></div>
+            <div class="cc l3"><span class="d num">2</span><span class="r num">5/6</span></div>
+            <div class="cc l1"><span class="d num">3</span><span class="r num">3/6</span></div>
+            <div class="cc l1"><span class="d num">4</span><span class="r num">2/6</span></div>
+            <div class="cc l4"><span class="d num">5</span><span class="r num">6/6</span></div>
+            <div class="cc l2"><span class="d num">6</span><span class="r num">4/6</span></div>
+            <div class="cc l3"><span class="d num">7</span><span class="r num">5/6</span></div>
+            <div class="cc l3"><span class="d num">8</span><span class="r num">5/6</span></div>
+            <div class="cc l2 tdy"><span class="d num">9</span><span class="r num">4/6</span></div>
+            <div class="cc fut"><span class="d num">10</span></div><div class="cc fut"><span class="d num">11</span></div>
+            <div class="cc fut"><span class="d num">12</span></div><div class="cc fut"><span class="d num">13</span></div><div class="cc fut"><span class="d num">14</span></div><div class="cc fut"><span class="d num">15</span></div><div class="cc fut"><span class="d num">16</span></div><div class="cc fut"><span class="d num">17</span></div><div class="cc fut"><span class="d num">18</span></div>
+            <div class="cc fut"><span class="d num">19</span></div><div class="cc fut"><span class="d num">20</span></div><div class="cc fut"><span class="d num">21</span></div><div class="cc fut"><span class="d num">22</span></div><div class="cc fut"><span class="d num">23</span></div><div class="cc fut"><span class="d num">24</span></div><div class="cc fut"><span class="d num">25</span></div>
+            <div class="cc fut"><span class="d num">26</span></div><div class="cc fut"><span class="d num">27</span></div><div class="cc fut"><span class="d num">28</span></div><div class="cc fut"><span class="d num">29</span></div><div class="cc fut"><span class="d num">30</span></div><div class="cc fut"><span class="d num">31</span></div><div class="cc off"><span class="d num">·</span></div>
+          </div>
+          <div class="cal-lg">
+            <span class="lgs">
+              меньше
+              <i class="lgsq" style="background:#131824"></i><i class="lgsq" style="background:rgba(77,141,255,.13)"></i><i class="lgsq" style="background:rgba(77,141,255,.24)"></i><i class="lgsq" style="background:rgba(77,141,255,.4)"></i><i class="lgsq" style="background:#4d8dff"></i>
+              больше
+            </span>
+            <span class="num">доля отметок за день · рамка — сегодня</span>
+          </div>
+        </div>
+
+        <div class="recs num">
+          <span class="rec"><b>342</b> отметки всего</span>
+          <span class="rec"><b>9</b> идеальных дней за 30</span>
+          <span class="rec">серии активны: <b>4 из 6</b></span>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ================================================== -->
+  <div class="sep"><span class="sep-tag">Экран 3: <b>Профиль / Привычки</b></span></div>
+  <p class="sep-desc">Аккаунт и синхронизация, управление привычками: добавление, редактирование, архив</p>
+
+  <div class="frame">
+    <div class="statusbar">
+      <span class="num">9:41</span>
+      <span class="sb-r">
+        <svg width="15" height="10" viewBox="0 0 16 11" fill="currentColor" aria-hidden="true"><rect x="0" y="7" width="2.6" height="4" rx="0.8"/><rect x="4.4" y="4.6" width="2.6" height="6.4" rx="0.8"/><rect x="8.8" y="2.3" width="2.6" height="8.7" rx="0.8"/><rect x="13.2" y="0" width="2.6" height="11" rx="0.8"/></svg>
+        <svg width="21" height="11" viewBox="0 0 24 12" aria-hidden="true"><rect x="1" y="1" width="19" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="3" y="3" width="11.5" height="6" rx="1.5" fill="currentColor"/><rect x="21.6" y="4" width="1.8" height="4" rx="0.9" fill="currentColor"/></svg>
+      </span>
+    </div>
+    <div class="app">
+      <aside class="rail" aria-label="Меню">
+        <div class="logo">✓</div>
+        <div class="ri" title="Сегодня">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3.5"/><path d="M8.5 12.4l2.6 2.6 4.6-5.6"/></svg>
+        </div>
+        <div class="ri" title="Статистика">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 19v-8"/><path d="M12 19V5"/><path d="M19 19v-5"/></svg>
+        </div>
+        <div class="ri on" title="Привычки">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="5" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="5" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </div>
+        <div class="sp"></div>
+        <div class="ava-s" title="Профиль">АС</div>
+      </aside>
+
+      <main class="content">
+        <div class="scr-h">
+          <div>
+            <div class="h-date">Привычки</div>
+            <div class="h-sub num">6 активных · 1 в архиве</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="account">
+            <div class="ava">АС</div>
+            <div style="min-width:0">
+              <div class="a-n">Анна Соколова</div>
+              <div class="a-e">anna.s@example.com</div>
+            </div>
+            <span class="sync"><i class="sd"></i>Синхронизировано</span>
+          </div>
+          <div class="asub num">Supabase · последняя синхронизация сегодня в 09:41</div>
+        </div>
+
+        <div class="sec">Активные</div>
+        <div class="card" style="padding:4px 11px">
+          <div class="li">
+            <span class="et" style="background:rgba(77,141,255,.12)">💧</span>
+            <span style="min-width:0"><span class="t" style="display:block">Вода 2 л</span><span class="s">ежедневно · бутылка на столе</span></span>
+            <span class="li-r num"><span class="li-stk">×12 <i>дн</i></span><span class="li-pct" style="display:block">97% · 30 дн</span></span>
+            <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+          </div>
+          <div class="li">
+            <span class="et" style="background:rgba(177,140,255,.12)">📚</span>
+            <span style="min-width:0"><span class="t" style="display:block">Чтение 30 мин</span><span class="s">ежедневно · перед сном</span></span>
+            <span class="li-r num"><span class="li-stk" style="color:var(--acc)">×27 <i>дн</i></span><span class="li-pct" style="display:block">100% · 30 дн</span></span>
+            <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+          </div>
+          <div class="li">
+            <span class="et" style="background:rgba(255,180,84,.12)">🎧</span>
+            <span style="min-width:0"><span class="t" style="display:block">Английский 15 мин</span><span class="s">ежедневно · подкаст по дороге</span></span>
+            <span class="li-r num"><span class="li-stk">×7 <i>дн</i></span><span class="li-pct" style="display:block">93% · 30 дн</span></span>
+            <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+          </div>
+          <div class="li">
+            <span class="et" style="background:rgba(52,211,153,.12)">🏃</span>
+            <span style="min-width:0"><span class="t" style="display:block">Бег 3 км</span><span class="s">ежедневно · утро</span></span>
+            <span class="li-r num"><span class="li-stk">×3 <i>дн</i></span><span class="li-pct" style="display:block">70% · 30 дн</span></span>
+            <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+          </div>
+          <div class="li">
+            <span class="et" style="background:rgba(47,212,200,.12)">🧘</span>
+            <span style="min-width:0"><span class="t" style="display:block">Медитация 10 мин</span><span class="s">ежедневно · серия оборвана вчера</span></span>
+            <span class="li-r num"><span class="li-stk" style="color:var(--bad)">×0 <i>дн</i></span><span class="li-pct" style="display:block">77% · 30 дн</span></span>
+            <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+          </div>
+          <div class="li">
+            <span class="et" style="background:rgba(255,125,170,.12)">💪</span>
+            <span style="min-width:0"><span class="t" style="display:block">Силовая</span><span class="s">3 раза в неделю · пн, чт, сб</span></span>
+            <span class="li-r num"><span class="li-stk">×1 <i>дн</i></span><span class="li-pct" style="display:block">67% · 30 дн</span></span>
+            <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+          </div>
+        </div>
+
+        <div class="sec">Архив</div>
+        <div class="card" style="padding:4px 11px">
+          <div class="li arc">
+            <span class="et" style="background:#1a202b">🎸</span>
+            <span style="min-width:0"><span class="t" style="display:block">Гитара 20 мин</span><span class="s num">в архиве с 21 сентября · лучшая серия ×14</span></span>
+            <span class="badge-arc" style="margin-left:auto">Архив</span>
+            <span class="restore">Восстановить</span>
+          </div>
+        </div>
+
+        <div class="add"><span class="pl">+</span>Новая привычка</div>
+
+        <div class="card" style="padding:4px 11px;margin-top:2px">
+          <div class="li">
+            <span class="si"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.4-3.4 3.9-5 7-5s5.6 1.6 7 5"/></svg></span>
+            <span class="t" style="font-size:11px">Аккаунт и данные</span>
+            <svg class="chev" style="margin-left:auto" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+          </div>
+          <div class="li">
+            <span class="si"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.6-3.4M4 13a8 8 0 0 0 14.6 3.4"/><path d="M5.5 3v4.6h4.6M18.5 21v-4.6h-4.6"/></svg></span>
+            <span class="t" style="font-size:11px">Синхронизация</span>
+            <span class="li-pct num" style="margin-left:auto">авто · Wi-Fi</span>
+          </div>
+          <div class="li">
+            <span class="si"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m0 0l-4-4m4 4l4-4M5 19h14"/></svg></span>
+            <span class="t" style="font-size:11px">Экспорт данных (CSV)</span>
+            <svg class="chev" style="margin-left:auto" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+          </div>
+          <div class="li">
+            <span class="si"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 11.2v4.4M12 7.8h.01"/></svg></span>
+            <span class="t" style="font-size:11px">О приложении</span>
+            <span class="li-pct num" style="margin-left:auto">v0.3.0 · MVP</span>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <p class="pfoot">
+    Статический макет для ревью · mock-данные · 390px · тёмная тема · без внешних зависимостей<br>
+    Интерактив: отметки «сегодня» в матрице кликабельны, переключатель «Неделя / Месяц» работает, строки и иконки реагируют на наведение
+  </p>
+</div>
+</body>
+</html>
