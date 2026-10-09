@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import AuthBlock from '../components/AuthBlock.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 import HabitDialog from '../components/HabitDialog.jsx';
@@ -7,9 +8,13 @@ import {
   archiveHabit,
   fetchAllHabits,
   fetchCheckIns,
+  hasUnsyncedLocalData,
+  migrateLocalToCloud,
   restoreHabit,
+  signOut,
   updateHabit,
 } from '../data/api.js';
+import useAuth from '../hooks/useAuth.js';
 import { formatDayMonth } from '../utils/format.js';
 import { getCurrentStreak } from '../utils/stats.js';
 
@@ -18,7 +23,9 @@ import { getCurrentStreak } from '../utils/stats.js';
  * привычек с датой создания и серией, редактирование через HabitDialog,
  * архивация с подтверждением прямо в карточке (FR-17..FR-19), свёрнутый раздел
  * «Архив» с восстановлением (FR-22..FR-23) и баннер локального хранения
- * (FR-58 в адаптации Mock-режима ДЗ4).
+ * (FR-58 в адаптации Mock-режима ДЗ4). С ДЗ5 сверху — блок аутентификации
+ * (AuthBlock, FR-54..FR-70) и диалог переноса локальных данных после входа
+ * (история №7): баннер локального режима показывается только в Mock-режиме.
  */
 
 /** Окно «молодости» привычки: моложе — бейдж «новая» вместо «0 дней» (FR-26). */
@@ -37,6 +44,46 @@ const LOCAL_DATA_BANNER = 'Данные хранятся локально (Mock)
 
 /** Суффикс альфы для подложки эмодзи-чипа в цвет привычки (как в HabitCard). */
 const CHIP_ALPHA = '22';
+
+/** Тексты диалога переноса локальных данных (история №7, FR-57). */
+const MIGRATION_CONFIRM_HINT =
+  'На этом устройстве есть привычки и отметки, сохранённые локально (Mock). ' +
+  'Перенести их в аккаунт? Даты и серии сохранятся';
+const MIGRATION_ERROR_HINT =
+  'Не удалось перенести данные. Локальные данные сохранены в браузере — можно повторить';
+
+/** Кнопки диалога переноса — общий вид с остальными кнопками экрана. */
+const DIALOG_PRIMARY =
+  'w-full rounded-full bg-sage px-4 py-2 text-xs font-semibold text-white ' +
+  'transition-colors hover:bg-sage-deep disabled:opacity-60';
+const DIALOG_GHOST =
+  'w-full rounded-full border border-line px-4 py-2 text-xs font-semibold text-ink-soft ' +
+  'transition-colors hover:text-ink disabled:opacity-50';
+
+/**
+ * Выбирает форму русского существительного по числу: 1 привычка, 3 привычки,
+ * 5 привычек. Диалог переноса показывает счётчики и должен склонять их.
+ *
+ * @param {number} count — количество.
+ * @param {string} one — форма «один».
+ * @param {string} few — форма «2–4».
+ * @param {string} many — форма «5+» и 11–14.
+ * @returns {string} Слово в правильной форме.
+ */
+function pluralWord(count, one, few, many) {
+  const lastTwoDigits = count % 100;
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
+    return many;
+  }
+  const lastDigit = count % 10;
+  if (lastDigit === 1) {
+    return one;
+  }
+  if (lastDigit >= 2 && lastDigit <= 4) {
+    return few;
+  }
+  return many;
+}
 
 /**
  * Сегодняшняя дата локального календаря в формате 'YYYY-MM-DD'.
@@ -286,10 +333,104 @@ function ArchivedHabitRow({ habit, busy, onRestore }) {
 }
 
 /**
+ * Диалог переноса локальных (Mock) данных в аккаунт после входа — история №7:
+ * подтверждение с тремя выборами («Синхронизировать и войти» / «Войти без
+ * переноса» / «Отмена»), состояние выполнения, результат со счётчиками и
+ * негативная ветка со сбоем («Повторить», локальные данные не теряются).
+ *
+ * @param {object} props — свойства компонента.
+ * @param {'confirm'|'running'|'success'|'error'} props.phase — фаза диалога.
+ * @param {{habits: number, checkIns: number}} [props.result] — счётчики переноса.
+ * @param {Function} props.onSync — «Синхронизировать и войти».
+ * @param {Function} props.onSkip — «Войти без переноса» (остаёмся в аккаунте).
+ * @param {Function} props.onCancel — «Отмена» (выходим обратно в гостевой режим).
+ * @param {Function} props.onRetry — «Повторить» после сбоя переноса.
+ * @param {Function} props.onClose — закрыть диалог после успеха.
+ * @returns {JSX.Element} Диалог переноса данных.
+ */
+function MigrationDialog({ phase, result, onSync, onSkip, onCancel, onRetry, onClose }) {
+  return (
+    <div
+      role="dialog"
+      aria-label="Перенос локальных данных"
+      aria-busy={phase === 'running' || undefined}
+      className="mt-3 rounded-3xl border border-line bg-card p-4 shadow-sm"
+    >
+      {phase === 'confirm' && (
+        <>
+          <p className="text-sm font-semibold text-ink">Перенести локальные данные?</p>
+          <p className="mt-1 text-xs leading-relaxed text-ink-soft">{MIGRATION_CONFIRM_HINT}</p>
+          <div className="mt-3 flex flex-col gap-2">
+            <button type="button" onClick={onSync} className={DIALOG_PRIMARY}>
+              Синхронизировать и войти
+            </button>
+            <button type="button" onClick={onSkip} className={DIALOG_GHOST}>
+              Войти без переноса
+            </button>
+            <button type="button" onClick={onCancel} className={DIALOG_GHOST}>
+              Отмена
+            </button>
+          </div>
+        </>
+      )}
+
+      {phase === 'running' && (
+        <p role="status" className="py-2 text-sm text-ink-soft">
+          Переносим данные…
+        </p>
+      )}
+
+      {phase === 'success' && (
+        <>
+          <p role="status" className="text-sm font-semibold text-ink">
+            Готово: данные перенесены в аккаунт
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+            {result.habits} {pluralWord(result.habits, 'привычка', 'привычки', 'привычек')} и{' '}
+            {result.checkIns}{' '}
+            {pluralWord(result.checkIns, 'отметка', 'отметки', 'отметок')} — с теми же датами,
+            серии не обнулены
+          </p>
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className={
+                'rounded-full bg-sage px-3.5 py-1.5 text-xs font-semibold text-white ' +
+                'transition-colors hover:bg-sage-deep'
+              }
+            >
+              Понятно
+            </button>
+          </div>
+        </>
+      )}
+
+      {phase === 'error' && (
+        <>
+          <p role="alert" className="text-sm font-semibold text-terracotta">
+            {MIGRATION_ERROR_HINT}
+          </p>
+          <div className="mt-3 flex flex-col gap-2">
+            <button type="button" onClick={onRetry} className={DIALOG_PRIMARY}>
+              Повторить
+            </button>
+            <button type="button" onClick={onSkip} className={DIALOG_GHOST}>
+              Войти без переноса
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
  * Экран «Профиль»: управление привычками — редактирование, архивация
  * и восстановление. Данные грузятся самостоятельно (fetchAllHabits +
  * fetchCheckIns одним эффектом), каждое действие проходит через mock-API
- * с обязательными состояниями loading / error / success.
+ * с обязательными состояниями loading / error / success. Сверху — блок
+ * аутентификации: в Mock-режиме плашка, в облачном — вход/выход (ДЗ5).
  *
  * @returns {JSX.Element} Экран профиля.
  */
@@ -310,6 +451,13 @@ export default function ProfileScreen() {
   const [editError, setEditError] = useState(null);
 
   const [archiveOpen, setArchiveOpen] = useState(false);
+
+  // Аутентификация (ДЗ5): сессия из useAuth, признак несинхронизированных
+  // локальных данных для предупреждения при выходе (FR-67) и диалог переноса
+  // после входа (история №7) с фазами confirm/running/success/error.
+  const { session, loading: authLoading, cloudEnabled } = useAuth();
+  const [localDataPending, setLocalDataPending] = useState(false);
+  const [migration, setMigration] = useState(null);
 
   // «Сегодня» фиксируется на монтировании: экран не обязан сам отслеживать
   // полуночь (FR-33 — задача экрана «Сегодня»), но серии считаются от неё.
@@ -340,6 +488,12 @@ export default function ProfileScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  /* Предупреждение FR-67 актуально, только пока есть неперенесённые локальные
+     данные; после миграции hasUnsyncedLocalData() вернёт false. */
+  useEffect(() => {
+    setLocalDataPending(Boolean(session) && hasUnsyncedLocalData());
+  }, [session]);
 
   const activeHabits = habits.filter((habit) => habit.archivedAt === null);
   const archivedHabits = habits.filter((habit) => habit.archivedAt !== null);
@@ -404,10 +558,93 @@ export default function ProfileScreen() {
     }
   };
 
+  /**
+   * Реакция на успешный вход (AuthBlock): перезагружает данные в контексте
+   * аккаунта и при наличии локальных (Mock) данных открывает диалог переноса —
+   * история №7: «Синхронизировать и войти» / «Войти без переноса» / «Отмена».
+   *
+   * @param {{userId: string, email: string}|null} nextSession — новая сессия.
+   * @returns {Promise<void>}
+   */
+  const handleSignedIn = useCallback(
+    async (nextSession) => {
+      await load();
+      if (nextSession && hasUnsyncedLocalData()) {
+        setMigration({ phase: 'confirm' });
+      }
+    },
+    [load]
+  );
+
+  /**
+   * Реакция на выход: данные аккаунта больше не показываются, перезагружаем
+   * локальный список (FR-65/FR-66 — данные устройства не подмешиваются).
+   *
+   * @returns {Promise<void>}
+   */
+  const handleSignedOut = useCallback(async () => {
+    await load();
+  }, [load]);
+
+  /**
+   * Выполняет перенос локальных данных в облако (migrateLocalToCloud).
+   * Негативная ветка истории №7: при сбое локальные данные остаются в браузере,
+   * диалог показывает ошибку с кнопкой «Повторить».
+   *
+   * @returns {Promise<void>}
+   */
+  const runMigration = async () => {
+    setMigration({ phase: 'running' });
+    try {
+      const result = await migrateLocalToCloud();
+      setLocalDataPending(false);
+      setMigration({ phase: 'success', result });
+    } catch {
+      setMigration({ phase: 'error' });
+    }
+  };
+
+  /**
+   * «Отмена» диалога переноса: пользователь передумал входить — завершаем
+   * сессию и возвращаемся в гостевой режим (FR-66).
+   *
+   * @returns {Promise<void>}
+   */
+  const cancelMigration = async () => {
+    setMigration(null);
+    try {
+      await signOut();
+      await load();
+    } catch {
+      // сбой выхода не страшен: сессию обновит onAuthChange из useAuth
+    }
+  };
+
   return (
     <section aria-label="Профиль">
       <h1 className="font-display text-2xl font-semibold">Профиль</h1>
       <p className="mt-1 text-sm text-ink-soft">Привычки, серии и архив — в одном месте.</p>
+
+      <AuthBlock
+        cloudEnabled={cloudEnabled}
+        session={session}
+        loading={authLoading}
+        hasLocalData={localDataPending}
+        onSignedIn={handleSignedIn}
+        onSignedOut={handleSignedOut}
+      />
+
+      {migration && (
+        <MigrationDialog
+          phase={migration.phase}
+          result={migration.result}
+          onSync={() => void runMigration()}
+          onSkip={() => setMigration(null)}
+          onCancel={() => void cancelMigration()}
+          onRetry={() => void runMigration()}
+          onClose={() => setMigration(null)}
+        />
+      )}
 
       {status === 'loading' && <LoadingState />}
 
@@ -419,7 +656,9 @@ export default function ProfileScreen() {
 
       {status === 'success' && (
         <>
-          <LocalDataBanner />
+          {/* Баннер локального режима — только в Mock (FR-58 адаптация ДЗ4);
+              в облачном режиме данные синхронизируются, баннер не нужен. */}
+          {!cloudEnabled && <LocalDataBanner />}
 
           {mutationError && (
             <div className="mt-3">

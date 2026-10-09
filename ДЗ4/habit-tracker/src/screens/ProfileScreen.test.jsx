@@ -1,12 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ProfileScreen from './ProfileScreen.jsx';
 import {
   archiveHabit,
   fetchAllHabits,
   fetchCheckIns,
+  getSession,
+  hasUnsyncedLocalData,
+  isCloudEnabled,
+  migrateLocalToCloud,
+  onAuthChange,
   restoreHabit,
+  signIn,
+  signOut,
   updateHabit,
 } from '../data/api.js';
 import { formatDayMonth } from '../utils/format.js';
@@ -15,7 +22,9 @@ import { formatDayMonth } from '../utils/format.js';
  * Тесты экрана «Профиль»: состояния загрузки/ошибки, список активных привычек
  * с сериями, подтверждение архивации (FR-17..FR-19), восстановление (FR-23)
  * и редактирование через HabitDialog. data/api.js подменён моком —
- * тестируется поведение экрана, а не mock-хранилище.
+ * тестируется поведение экрана, а не mock-хранилище. Auth-методы ДЗ5
+ * замоканы «гостевым Mock-режимом» (isCloudEnabled = false), поэтому блок
+ * аутентификации рисует плашку локального режима и не влияет на сценарии.
  */
 
 vi.mock('../data/api.js', () => ({
@@ -24,6 +33,15 @@ vi.mock('../data/api.js', () => ({
   fetchCheckIns: vi.fn(),
   restoreHabit: vi.fn(),
   updateHabit: vi.fn(),
+  isCloudEnabled: vi.fn(() => false),
+  getSession: vi.fn(),
+  onAuthChange: vi.fn(() => vi.fn()),
+  signIn: vi.fn(),
+  signUp: vi.fn(),
+  signOut: vi.fn(),
+  requestPasswordReset: vi.fn(),
+  hasUnsyncedLocalData: vi.fn(() => false),
+  migrateLocalToCloud: vi.fn(),
 }));
 
 /** Локальная дата N дней назад строкой 'YYYY-MM-DD' — как видит её экран. */
@@ -208,5 +226,111 @@ describe('ProfileScreen — архив', () => {
       color: '#7C9883',
     });
     await vi.waitFor(() => expect(fetchAllHabits).toHaveBeenCalledTimes(2));
+  });
+});
+
+/*
+ * ДЗ5, история №7 — перенос локальных данных после входа: при наличии
+ * несинхронизированных Mock-данных экран показывает диалог с тремя выборами
+ * («Синхронизировать и войти» / «Войти без переноса» / «Отмена»), успех —
+ * со счётчиками, «Отмена» возвращает в гостевой режим через signOut.
+ * Облачный режим включается моком isCloudEnabled, вход выполняется через
+ * настоящую форму AuthBlock — как это делает пользователь.
+ */
+
+/** Заполняет форму входа и нажимает «Войти» (успех задаётся моком signIn). */
+async function submitSignInForm(user) {
+  await screen.findByLabelText('Email');
+  await user.type(screen.getByLabelText('Email'), 'user@mail.ru');
+  await user.type(screen.getByLabelText('Пароль'), 'longpassword');
+  await user.click(screen.getByRole('button', { name: 'Войти' }));
+}
+
+describe('ProfileScreen — ДЗ5: перенос локальных данных', () => {
+  beforeEach(() => {
+    isCloudEnabled.mockReturnValue(true);
+    getSession.mockResolvedValue(null); // стартуем гостем: форма входа
+    onAuthChange.mockImplementation(() => () => {});
+    signIn.mockResolvedValue({ user: { id: 'u1', email: 'user@mail.ru' } });
+    signOut.mockResolvedValue(undefined);
+    migrateLocalToCloud.mockResolvedValue({ habits: 3, checkIns: 12 });
+    fetchAllHabits.mockResolvedValue(HABITS);
+    fetchCheckIns.mockResolvedValue(CHECK_INS);
+  });
+
+  it('после входа с несинхронизированными данными показывает диалог с тремя выборами', async () => {
+    hasUnsyncedLocalData.mockReturnValue(true);
+    const user = userEvent.setup();
+    render(<ProfileScreen />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    await submitSignInForm(user);
+
+    const dialog = await screen.findByRole('dialog', { name: 'Перенос локальных данных' });
+    expect(within(dialog).getByText('Перенести локальные данные?')).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: 'Синхронизировать и войти' })).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: 'Войти без переноса' })).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: 'Отмена' })).toBeTruthy();
+  });
+
+  it('«Синхронизировать и войти» вызывает migrateLocalToCloud и показывает счётчики', async () => {
+    hasUnsyncedLocalData.mockReturnValue(true);
+    const user = userEvent.setup();
+    render(<ProfileScreen />);
+    await submitSignInForm(user);
+
+    await user.click(await screen.findByRole('button', { name: 'Синхронизировать и войти' }));
+
+    expect(migrateLocalToCloud).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText('Готово: данные перенесены в аккаунт')).toBeTruthy();
+    // счётчики склоняются: 3 привычки, 12 отметок
+    expect(screen.getByText(/3 привычки и 12 отметок/)).toBeTruthy();
+    expect(screen.getByText(/серии не обнулены/)).toBeTruthy();
+  });
+
+  it('«Войти без переноса» закрывает диалог, перенос не запускается', async () => {
+    hasUnsyncedLocalData.mockReturnValue(true);
+    const user = userEvent.setup();
+    render(<ProfileScreen />);
+    await submitSignInForm(user);
+
+    await user.click(await screen.findByRole('button', { name: 'Войти без переноса' }));
+
+    expect(migrateLocalToCloud).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('«Отмена» завершает сессию через signOut и возвращает в гостевой режим', async () => {
+    hasUnsyncedLocalData.mockReturnValue(true);
+    let notifyAuthChange = null;
+    onAuthChange.mockImplementation((callback) => {
+      notifyAuthChange = callback;
+      return () => {};
+    });
+    const user = userEvent.setup();
+    render(<ProfileScreen />);
+    await submitSignInForm(user);
+
+    // useAuth узнаёт о входе через onAuthStateChange — как в реальном облаке
+    act(() => notifyAuthChange({ user: { id: 'u1', email: 'user@mail.ru' } }, 'SIGNED_IN'));
+    expect(await screen.findByText('user@mail.ru')).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Отмена' }));
+
+    await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
+    act(() => notifyAuthChange(null, 'SIGNED_OUT'));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    // гостевой режим — снова форма входа
+    expect(await screen.findByLabelText('Email')).toBeTruthy();
+  });
+
+  it('без локальных данных после входа диалог переноса не появляется', async () => {
+    hasUnsyncedLocalData.mockReturnValue(false);
+    const user = userEvent.setup();
+    render(<ProfileScreen />);
+    await submitSignInForm(user);
+
+    await waitFor(() => expect(signIn).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

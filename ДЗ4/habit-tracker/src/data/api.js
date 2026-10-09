@@ -1,7 +1,9 @@
 /*
- * Mock-слой данных «Трекера привычек»: эмуляция сетевого API (асинхронность,
- * задержки 150–400 мс, ошибки сети) поверх localStorage.
- * В ДЗ5 будет заменён на Supabase — сигнатуры функций подобраны под будущий API.
+ * Слой данных «Трекера привычек»: ФАСАД над двумя бэкендами (ДЗ5).
+ * Если задана конфигурация Supabase (VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY),
+ * публичные функции делегируют реальному бэкенду supabaseBackend.js; иначе
+ * работает Mock ниже — эмуляция сетевого API (задержки 150–400 мс, ошибки
+ * сети) поверх localStorage. Контракт функций одинаков для обоих режимов.
  *
  * Форматы данных (совпадают с будущей схемой Supabase):
  *   Habit   = { id, title, emoji, color, createdAt: 'YYYY-MM-DD',
@@ -316,6 +318,7 @@ function findHabit(state, id) {
  * @throws {Error} 'NETWORK' — если включён демонстрационный режим ошибки.
  */
 export async function fetchHabits() {
+  if (isCloudEnabled()) return (await loadCloudBackend()).fetchHabits();
   await simulateNetwork();
   const state = loadState();
   return state.habits.filter((habit) => habit.archivedAt === null);
@@ -327,6 +330,7 @@ export async function fetchHabits() {
  * @throws {Error} 'NETWORK' — если включён демонстрационный режим ошибки.
  */
 export async function fetchAllHabits() {
+  if (isCloudEnabled()) return (await loadCloudBackend()).fetchAllHabits();
   await simulateNetwork();
   return loadState().habits;
 }
@@ -337,6 +341,7 @@ export async function fetchAllHabits() {
  * @throws {Error} 'NETWORK' — если включён демонстрационный режим ошибки.
  */
 export async function fetchCheckIns() {
+  if (isCloudEnabled()) return (await loadCloudBackend()).fetchCheckIns();
   await simulateNetwork();
   return loadState().checkIns;
 }
@@ -351,6 +356,9 @@ export async function fetchCheckIns() {
  * @throws {Error} при невалидном названии или режиме ошибки сети.
  */
 export async function createHabit({ title, emoji = '🌱', color = '#7C9883' }) {
+  if (isCloudEnabled()) {
+    return (await loadCloudBackend()).createHabit({ title, emoji, color });
+  }
   await simulateNetwork();
   const trimmedTitle = assertValidTitle(title);
   const state = loadState();
@@ -377,6 +385,7 @@ export async function createHabit({ title, emoji = '🌱', color = '#7C9883' }) 
  *   или режиме ошибки сети.
  */
 export async function updateHabit(id, patch = {}) {
+  if (isCloudEnabled()) return (await loadCloudBackend()).updateHabit(id, patch);
   await simulateNetwork();
   const state = loadState();
   const habit = findHabit(state, id);
@@ -403,6 +412,7 @@ export async function updateHabit(id, patch = {}) {
  * @throws {Error} 'NOT_FOUND' если привычки нет; 'NETWORK' в режиме ошибки.
  */
 export async function archiveHabit(id) {
+  if (isCloudEnabled()) return (await loadCloudBackend()).archiveHabit(id);
   await simulateNetwork();
   const state = loadState();
   const habit = findHabit(state, id);
@@ -421,6 +431,7 @@ export async function archiveHabit(id) {
  * @throws {Error} 'NOT_FOUND' если привычки нет; 'NETWORK' в режиме ошибки.
  */
 export async function restoreHabit(id) {
+  if (isCloudEnabled()) return (await loadCloudBackend()).restoreHabit(id);
   await simulateNetwork();
   const state = loadState();
   const habit = findHabit(state, id);
@@ -441,6 +452,7 @@ export async function restoreHabit(id) {
  * @throws {Error} 'NOT_FOUND' если привычки нет; 'NETWORK' в режиме ошибки.
  */
 export async function toggleCheckIn(habitId, date) {
+  if (isCloudEnabled()) return (await loadCloudBackend()).toggleCheckIn(habitId, date);
   await simulateNetwork();
   const state = loadState();
   const habit = findHabit(state, habitId);
@@ -482,3 +494,235 @@ export function setMockError(flag) {
 export function clearMockError() {
   removeRaw(ERROR_FLAG_KEY);
 }
+
+/*
+ * Фасад (ДЗ5): облачный режим и аутентификация поверх Supabase. Облако
+ * включается парой env-переменных (см. .env.example); без них приложение
+ * целиком работает в Mock-режиме, а auth-функции кидают AUTH_UNSUPPORTED.
+ * Реальный бэкенд подгружается динамически — SDK не попадает в Mock-бандл.
+ */
+
+/**
+ * Проверяет, включён ли облачный режим (задана конфигурация Supabase).
+ * @returns {boolean} true, если запросы уходят в Supabase, false — в Mock.
+ */
+export function isCloudEnabled() {
+  const env = import.meta.env ?? {};
+  return Boolean(env[ENV_SUPABASE_URL] && env[ENV_SUPABASE_ANON_KEY]);
+}
+
+/**
+ * Лениво подгружает модуль реального бэкенда: динамический import не тянет
+ * @supabase/supabase-js в бандл, пока облако не настроено (легковесный Mock).
+ * @returns {Promise<Object>} модуль supabaseBackend.
+ */
+async function loadCloudBackend() {
+  return import('./supabaseBackend.js');
+}
+
+/**
+ * Очищает локальное Mock-хранилище (localStorage и in-memory fallback).
+ * Вызывается фасадом после успешного переноса данных в Supabase.
+ * @returns {void}
+ */
+export function clearMockData() {
+  removeRaw(STORAGE_KEY);
+}
+
+/**
+ * Создаёт доменную ошибку аутентификации: код лежит и в message (конвенция
+ * остальных доменных ошибок проекта), и в свойстве code для UI.
+ * @param {string} code код ошибки ('EMAIL_EXISTS', 'INVALID_CREDENTIALS').
+ * @returns {Error} ошибка.
+ */
+function authDomainError(code) {
+  const error = new Error(code);
+  error.code = code;
+  return error;
+}
+
+/**
+ * Переводит ошибки Supabase Auth на коды контракта: «already registered» —
+ * занятый email (FR-56), «Invalid login credentials» — общий отказ входа
+ * (FR-64, без раскрытия, какое поле неверно). Доменные ошибки проходит
+ * без изменений, прочие сбои транспорта схлопываются в 'NETWORK'.
+ * @param {Object|Error} error сырая ошибка Supabase или доменная Error.
+ * @returns {Error} нормализованная ошибка.
+ */
+function normalizeAuthError(error) {
+  const message = error && error.message ? String(error.message) : '';
+  if (message.includes('already registered')) {
+    return authDomainError(AUTH_ERROR_EMAIL_EXISTS);
+  }
+  if (message.includes('Invalid login credentials')) {
+    return authDomainError(AUTH_ERROR_INVALID_CREDENTIALS);
+  }
+  return error instanceof Error ? error : new Error('NETWORK');
+}
+
+/**
+ * Регистрирует пользователя в Supabase Auth (FR-54).
+ * @param {string} email адрес электронной почты.
+ * @param {string} password пароль.
+ * @returns {Promise<{user?: Object, needsConfirmation?: boolean}>} пользователь
+ *   или признак необходимости подтвердить email.
+ * @throws {Error} 'AUTH_UNSUPPORTED' в Mock-режиме; 'EMAIL_EXISTS' если аккаунт
+ *   уже есть (FR-56); 'NETWORK' при сбое сети.
+ */
+export async function signUp(email, password) {
+  if (!isCloudEnabled()) throw new Error('AUTH_UNSUPPORTED');
+  try {
+    return await (await loadCloudBackend()).signUp(email, password);
+  } catch (error) {
+    throw normalizeAuthError(error);
+  }
+}
+
+/**
+ * Выполняет вход по email и паролю (FR-63).
+ * @param {string} email адрес электронной почты.
+ * @param {string} password пароль.
+ * @returns {Promise<{user: Object}>} пользователь.
+ * @throws {Error} 'AUTH_UNSUPPORTED' в Mock-режиме; 'INVALID_CREDENTIALS'
+ *   при неверной паре (FR-64); 'NETWORK' при сбое сети.
+ */
+export async function signIn(email, password) {
+  if (!isCloudEnabled()) throw new Error('AUTH_UNSUPPORTED');
+  try {
+    return await (await loadCloudBackend()).signIn(email, password);
+  } catch (error) {
+    throw normalizeAuthError(error);
+  }
+}
+
+/**
+ * Завершает сессию текущего пользователя (FR-66). Локальные Mock-данные
+ * не трогает — их судьбу решает UI (FR-65/FR-67).
+ * @returns {Promise<void>}
+ * @throws {Error} 'AUTH_UNSUPPORTED' в Mock-режиме; 'NETWORK' при сбое сети.
+ */
+export async function signOut() {
+  if (!isCloudEnabled()) throw new Error('AUTH_UNSUPPORTED');
+  return (await loadCloudBackend()).signOut();
+}
+
+/**
+ * Возвращает текущую сессию или null (контракт supabaseBackend: {user}|null).
+ * @returns {Promise<null|{user: Object}>} сессия с пользователем.
+ * @throws {Error} 'AUTH_UNSUPPORTED' в Mock-режиме; 'NETWORK' при сбое.
+ */
+export async function getSession() {
+  if (!isCloudEnabled()) throw new Error('AUTH_UNSUPPORTED');
+  return (await loadCloudBackend()).getSession();
+}
+
+/**
+ * Подписывается на смену состояния аутентификации. Подписка асинхронная:
+ * бэкенд подгружается динамически, до готовности колбэк просто молчит.
+ * @param {Function} callback колбэк (session|null, event).
+ * @returns {Function} функция отписки.
+ * @throws {Error} 'AUTH_UNSUPPORTED' в Mock-режиме.
+ */
+export function onAuthChange(callback) {
+  if (!isCloudEnabled()) throw new Error('AUTH_UNSUPPORTED');
+  let unsubscribe = () => {};
+  let active = true;
+  loadCloudBackend()
+    .then((backend) => {
+      if (active) {
+        unsubscribe = backend.onAuthChange(callback);
+      }
+    })
+    .catch(() => {
+      // бэкенд не загрузился — подписка остаётся пустой, UI видит гостя
+    });
+  return () => {
+    active = false;
+    unsubscribe();
+  };
+}
+
+/**
+ * Отправляет письмо со ссылкой сброса пароля (FR-68). Ответ не раскрывает
+ * существование email; кулдаун 60 секунд (FR-70) — ответственность UI.
+ * @param {string} email адрес электронной почты.
+ * @returns {Promise<void>}
+ * @throws {Error} 'AUTH_UNSUPPORTED' в Mock-режиме; 'NETWORK' при сбое.
+ */
+export async function requestPasswordReset(email) {
+  if (!isCloudEnabled()) throw new Error('AUTH_UNSUPPORTED');
+  return (await loadCloudBackend()).requestPasswordReset(email);
+}
+
+/**
+ * Возвращает идентификатор текущего пользователя или null без сессии.
+ * @returns {Promise<null|string>} uuid пользователя.
+ * @throws {Error} 'AUTH_UNSUPPORTED' в Mock-режиме; 'NETWORK' при сбое.
+ */
+export async function getUserId() {
+  if (!isCloudEnabled()) throw new Error('AUTH_UNSUPPORTED');
+  return (await loadCloudBackend()).getUserId();
+}
+
+/**
+ * Переносит локальные Mock-данные в Supabase текущего пользователя (история
+ * №7, FR-57) и очищает локальное хранилище Mock: ключ ht_mock_v1, in-memory
+ * кэш и отметка «перенесено», чтобы UI больше не предлагал перенос.
+ * @returns {Promise<{habits: number, checkIns: number}>} число перенесённых
+ *   привычек и отметок.
+ * @throws {Error} 'AUTH_UNSUPPORTED' в Mock-режиме; 'AUTH' без сессии;
+ *   'NETWORK' при сбое сети.
+ */
+export async function migrateLocalToCloud() {
+  if (!isCloudEnabled()) throw new Error('AUTH_UNSUPPORTED');
+  const result = await (await loadCloudBackend()).migrateLocalToCloud();
+  clearMockData();
+  writeRaw(SYNCED_FLAG_KEY, '1');
+  return result;
+}
+
+/*
+ * ===========================================================================
+ * Константы облачного режима (ДЗ5, FR-54..FR-70) для фасадных функций выше:
+ * env-переменные, отметка переноса данных и коды ошибок аутентификации.
+ * ===========================================================================
+ */
+
+/** env-переменные, вместе включающие облачный режим (см. .env.example). */
+const ENV_SUPABASE_URL = 'VITE_SUPABASE_URL';
+const ENV_SUPABASE_ANON_KEY = 'VITE_SUPABASE_ANON_KEY';
+
+/** Отметка «локальные данные уже перенесены в облако» (FR-57 / FR-67). */
+const SYNCED_FLAG_KEY = 'ht_mock_synced_v1';
+
+/** Коды ошибок аутентификации, которые UI показывает по-разному. */
+const AUTH_ERROR_EMAIL_EXISTS = 'EMAIL_EXISTS';
+const AUTH_ERROR_INVALID_CREDENTIALS = 'INVALID_CREDENTIALS';
+
+/**
+ * Проверяет наличие локальных (Mock) данных, ещё не перенесённых в облако.
+ * Решает два сценария: предложить перенос после входа (история №7) и
+ * предупредить перед выходом (FR-67). Seed-запись не создаёт — читает только
+ * то, что реально лежит в хранилище.
+ *
+ * @returns {boolean} true, если есть неперенесённые локальные данные.
+ */
+export function hasUnsyncedLocalData() {
+  if (!isCloudEnabled() || readRaw(SYNCED_FLAG_KEY) === '1') {
+    return false;
+  }
+  const raw = readRaw(STORAGE_KEY);
+  if (raw === null) {
+    return false;
+  }
+  try {
+    const { habits, checkIns } = JSON.parse(raw);
+    return (
+      (Array.isArray(habits) && habits.length > 0) ||
+      (Array.isArray(checkIns) && checkIns.length > 0)
+    );
+  } catch {
+    return false; // повреждённые данные считаем отсутствием — перенос не предлагаем
+  }
+}
+
