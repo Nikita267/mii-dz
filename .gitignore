@@ -1,0 +1,16 @@
+# Рабочие материалы курса (не для сдачи)
+/_dz_text.txt
+/дз.txt
+/ОБЗОР_ДЗ.md
+/МИИ.txt
+/Промты/
+/ДЗ.docx
+
+# ОС
+Thumbs.db
+.DS_Store
+
+# Node (приложение ДЗ4+)
+node_modules/
+dist/
+.env
