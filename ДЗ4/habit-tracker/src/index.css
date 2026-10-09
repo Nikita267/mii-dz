@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+/*
+ * Дизайн-токены Концепции 1 «Спокойный минимализм» (ДЗ3, ui_concepts/концепция-1-минимализм.html).
+ * Палитра перенесена из макета один в один.
+ */
+@theme {
+  --color-paper: #FAF7F1;      /* тёплый бумажный фон */
+  --color-card: #FFFFFF;       /* карточки */
+  --color-ink: #2C2A25;        /* тёплый почти-чёрный текст */
+  --color-ink-soft: #77715F;   /* вторичный текст */
+  --color-ink-faint: #A39D8C;  /* приглушённые подписи */
+  --color-line: #EBE5D8;       /* тёплые границы */
+  --color-sage: #7C9883;       /* шалфейно-зелёный акцент */
+  --color-sage-deep: #58755F;  /* тёмный шалфей (hover/active) */
+  --color-sage-mist: #E9F0E8;  /* мягкая подложка акцента */
+  --color-bar-off: #E7E1D2;    /* «пустые» столбики/точки */
+
+  --font-display: Georgia, "Times New Roman", serif;
+}
