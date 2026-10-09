@@ -63,7 +63,7 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 function describeValue(value) {
   try {
     return `${typeof value}: ${String(value)}`;
-  } catch (err) {
+  } catch {
     return typeof value; // объект, чей toString() бросает исключение
   }
 }

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { initAnalytics, trackEvent } from './analytics/index.js';
 import TodayScreen from './screens/TodayScreen.jsx';
 import StatsScreen from './screens/StatsScreen.jsx';
 import ProfileScreen from './screens/ProfileScreen.jsx';
@@ -30,6 +31,18 @@ function initialTab() {
  */
 export default function App() {
   const [tab, setTab] = useState(initialTab);
+
+  // Счётчик аналитики (ДЗ6) грузится один раз при монтировании; без env
+  // (VITE_GA_MEASUREMENT_ID / VITE_YM_COUNTER_ID) initAnalytics — no-op.
+  useEffect(() => {
+    initAnalytics();
+  }, []);
+
+  // Просмотр экрана — событие screen_view при каждой смене вкладки
+  // (включая первую: эффект срабатывает и на монтировании).
+  useEffect(() => {
+    trackEvent('screen_view', { screen: tab });
+  }, [tab]);
 
   /** Переключает вкладку и синхронизирует хэш URL (глубокая ссылка). */
   const switchTab = (id) => {

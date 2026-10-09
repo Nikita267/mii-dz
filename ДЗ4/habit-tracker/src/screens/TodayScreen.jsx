@@ -4,9 +4,11 @@ import EmptyState from '../components/EmptyState.jsx';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 import HabitCard from '../components/HabitCard.jsx';
 import HabitDialog from '../components/HabitDialog.jsx';
+import { trackEvent } from '../analytics/index.js';
 import { createHabit } from '../data/api.js';
 import useHabitsData from '../hooks/useHabitsData.js';
 import { formatDayMonth } from '../utils/format.js';
+import { logInfo, logWarning } from '../utils/logger.js';
 
 /*
  * Экран «Сегодня» (Концепция 1 «Спокойный минимализм»): дата и сводка дня,
@@ -116,10 +118,12 @@ export default function TodayScreen() {
     setDialogError(null);
     try {
       await createHabit(payload);
+      logInfo('habit_created', { title: payload.title });
+      trackEvent('habit_created');
       setDialogOpen(false);
       reload();
     } catch (createError) {
-      console.error('TodayScreen: привычка не создана', createError);
+      logWarning('habit_create_failed', { error: String(createError) });
       setDialogError(CREATE_ERROR_MESSAGE);
     } finally {
       setSaving(false);

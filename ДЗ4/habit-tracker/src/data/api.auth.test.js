@@ -8,6 +8,7 @@ import {
   onAuthChange,
   requestPasswordReset,
   signIn,
+  signInWithOAuth,
   signOut,
   signUp,
 } from './api.js';
@@ -39,6 +40,7 @@ describe('api.js — фасад в Mock-режиме (env не задан)', () 
   it.each([
     ['signUp', () => signUp('user@mail.ru', 'longpassword')],
     ['signIn', () => signIn('user@mail.ru', 'longpassword')],
+    ['signInWithOAuth', () => signInWithOAuth('google')],
     ['signOut', () => signOut()],
     ['getSession', () => getSession()],
     ['requestPasswordReset', () => requestPasswordReset('user@mail.ru')],

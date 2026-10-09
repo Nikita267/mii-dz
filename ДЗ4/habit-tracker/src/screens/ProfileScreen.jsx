@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { trackEvent } from '../analytics/index.js';
 import AuthBlock from '../components/AuthBlock.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import ErrorBanner from '../components/ErrorBanner.jsx';
@@ -456,7 +457,9 @@ export default function ProfileScreen() {
   // локальных данных для предупреждения при выходе (FR-67) и диалог переноса
   // после входа (история №7) с фазами confirm/running/success/error.
   const { session, loading: authLoading, cloudEnabled } = useAuth();
-  const [localDataPending, setLocalDataPending] = useState(false);
+  // Производное значение (вместо setState-эффекта): пересчитывается при каждом
+  // рендере — после миграции localStorage уже пуст, предупреждение уходит само.
+  const localDataPending = Boolean(session) && hasUnsyncedLocalData();
   const [migration, setMigration] = useState(null);
 
   // «Сегодня» фиксируется на монтировании: экран не обязан сам отслеживать
@@ -485,15 +488,12 @@ export default function ProfileScreen() {
     }
   }, []);
 
+  // Первая загрузка — микрозадачей: react-hooks/set-state-in-effect запрещает
+  // синхронные setState из тела эффекта, а на монтировании синхронные вызовы
+  // внутри load и так no-op (status уже 'loading', loadError уже null).
   useEffect(() => {
-    load();
+    Promise.resolve().then(load);
   }, [load]);
-
-  /* Предупреждение FR-67 актуально, только пока есть неперенесённые локальные
-     данные; после миграции hasUnsyncedLocalData() вернёт false. */
-  useEffect(() => {
-    setLocalDataPending(Boolean(session) && hasUnsyncedLocalData());
-  }, [session]);
 
   const activeHabits = habits.filter((habit) => habit.archivedAt === null);
   const archivedHabits = habits.filter((habit) => habit.archivedAt !== null);
@@ -597,7 +597,6 @@ export default function ProfileScreen() {
     setMigration({ phase: 'running' });
     try {
       const result = await migrateLocalToCloud();
-      setLocalDataPending(false);
       setMigration({ phase: 'success', result });
     } catch {
       setMigration({ phase: 'error' });
@@ -692,7 +691,11 @@ export default function ProfileScreen() {
                   }}
                   onArchiveCancel={() => setConfirmId(null)}
                   onArchiveConfirm={() =>
-                    runMutation(habit.id, () => archiveHabit(habit.id), () => setConfirmId(null))
+                    runMutation(habit.id, () => archiveHabit(habit.id), () => {
+                      setConfirmId(null);
+                      // Событие аналитики (ДЗ6) — только после успешной архивации.
+                      trackEvent('habit_archived');
+                    })
                   }
                 />
               ))}

@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 const envText = readFileSync(new URL('../.env', import.meta.url), 'utf8');
 const env = Object.fromEntries(
   envText
-    .replace(/^﻿/, '') // BOM
+    .replace(/^\uFEFF/, '') // BOM
     .split(/\r?\n/) // Windows CRLF
     .filter((line) => line.trim() && !line.trim().startsWith('#'))
     .map((line) => {

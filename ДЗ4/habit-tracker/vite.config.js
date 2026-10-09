@@ -12,5 +12,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    // Глобальный setup: тесты всегда стартуют в Mock-режиме (см. vitest.setup.js)
+    setupFiles: ['./vitest.setup.js'],
   },
 });

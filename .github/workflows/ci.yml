@@ -1,0 +1,85 @@
+# CI/CD конвейер сквозного проекта «Трекер привычек» (ДЗ6).
+# Приложение живёт в подкаталоге ДЗ4/habit-tracker монорепозитория курса.
+#
+# quality — линт, тесты и сборка на каждый push (main) и каждый pull_request.
+# deploy  — прод-деплой на Vercel ТОЛЬКО при push в main и только когда задан
+#           секрет VERCEL_TOKEN. Пока секретов нет, шаги деплоя пропускаются
+#           и конвейер остаётся зелёным; после добавления секретов
+#           (VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID) деплой включается
+#           без правок файла.
+#
+# ВАЖНО: проверять секрет в if самой джобы нельзя — контекст env недоступен
+# в jobs.<job_id>.if (см. таблицу доступности контекстов в доках GitHub
+# Actions), поэтому проверка env.VERCEL_TOKEN != '' вынесена на уровень шагов.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    name: Линт, тесты, сборка
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ДЗ4/habit-tracker
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          # Локфайл лежит в подкаталоге, а не в корне репозитория.
+          cache-dependency-path: ДЗ4/habit-tracker/package-lock.json
+
+      - name: Установка зависимостей
+        run: npm ci
+
+      - name: Линт
+        run: npm run lint
+
+      - name: Тесты
+        run: npm test
+
+      - name: Сборка
+        run: npm run build
+
+  deploy:
+    name: Деплой на Vercel (prod)
+    needs: quality
+    # Только push в main: у pull_request реф — refs/pull/N/merge.
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # Шаги деплоя выполняются только при заданном секрете VERCEL_TOKEN
+      # (проверка env возможна на уровне шагов — см. комментарий в шапке).
+      - name: Установка Vercel CLI
+        if: ${{ env.VERCEL_TOKEN != '' }}
+        run: npm install -g vercel@latest
+
+      - name: Деплой (vercel deploy --prod)
+        if: ${{ env.VERCEL_TOKEN != '' }}
+        run: cd "ДЗ4/habit-tracker" && vercel deploy --prod --yes
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Деплой отключён (нет VERCEL_TOKEN)
+        if: ${{ env.VERCEL_TOKEN == '' }}
+        run: echo 'Секрет VERCEL_TOKEN не задан — шаг деплоя пропущен. Добавьте секреты VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID, чтобы включить деплой.'

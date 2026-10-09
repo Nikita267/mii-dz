@@ -3,6 +3,7 @@ import {
   migrateLocalToCloud,
   requestPasswordReset,
   signIn,
+  signInWithOAuth,
   signOut,
   signUp,
 } from '../data/api.js';
@@ -198,6 +199,7 @@ function CredentialsForm({ onSignedIn, onForgot, onRegistered }) {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [oauthPending, setOauthPending] = useState(false);
   const isLogin = mode === 'login';
 
   /**
@@ -273,6 +275,28 @@ function CredentialsForm({ onSignedIn, onForgot, onRegistered }) {
     }
   };
 
+  /**
+   * Запуск OAuth2-входа через Google (ДЗ6): клик уводит браузер на страницу
+   * провайдера, ответ Supabase примет по редиректу на origin приложения, а
+   * готовую сессию пришлёт onAuthChange. Провайдер должен быть включён в
+   * проекте Supabase: Authentication → Providers → Google.
+   *
+   * @returns {Promise<void>}
+   */
+  const handleGoogleSignIn = async () => {
+    setOauthPending(true);
+    setSubmitError(null);
+    try {
+      await signInWithOAuth('google');
+      // При успехе страница вот-вот уйдёт на google.com — разблокировать
+      // кнопку не нужно (иначе клик станет повторяемым до выгрузки).
+    } catch (oauthError) {
+      console.error('AuthBlock: OAuth-вход не начался', oauthError);
+      setSubmitError(SERVER_ERRORS.default);
+      setOauthPending(false);
+    }
+  };
+
   return (
     <section
       aria-label="Вход в аккаунт"
@@ -300,7 +324,31 @@ function CredentialsForm({ onSignedIn, onForgot, onRegistered }) {
         ))}
       </div>
 
-      <form className="mt-4 space-y-3" onSubmit={handleSubmit} noValidate>
+      {/* OAuth2 (ДЗ6): один клик вместо пары email/пароль; работает и для
+          входа, и для регистрации — аккаунт создаётся провайдером при первом
+          входе. Белая кнопка с рамкой и буквой G — визуально отделена от
+          основной (шалфейной) submit-кнопки формы. */}
+      <button
+        type="button"
+        onClick={() => void handleGoogleSignIn()}
+        disabled={oauthPending}
+        className={
+          'mt-4 flex w-full items-center justify-center gap-2.5 rounded-full border ' +
+          'border-line bg-card px-4 py-2.5 text-sm font-semibold text-ink ' +
+          'transition-colors hover:border-sage/60 disabled:opacity-60'
+        }
+      >
+        <span aria-hidden="true" className="font-display text-base leading-none">G</span>
+        {oauthPending ? 'Открываем Google…' : 'Войти через Google'}
+      </button>
+
+      <div aria-hidden="true" className="mt-3 flex items-center gap-3">
+        <span className="h-px flex-1 bg-line" />
+        <span className="text-xs text-ink-faint">или</span>
+        <span className="h-px flex-1 bg-line" />
+      </div>
+
+      <form className="mt-3 space-y-3" onSubmit={handleSubmit} noValidate>
         <Field
           id="auth-email"
           label="Email"

@@ -6,7 +6,7 @@
 
 - **React 19 + Vite 7** — SPA без лишних зависимостей (роутинг — вкладки, состояние — хуки)
 - **Tailwind CSS 4** — дизайн-токены Концепции 1 «Спокойный минимализм» из ДЗ3 (`src/index.css`)
-- **Vitest + Testing Library** — 121 юнит-/компонентный тест
+- **Vitest + Testing Library** — 170 юнит-/компонентных тестов
 - **Supabase** (PostgreSQL + Auth + RLS) — облачный бэкенд через `@supabase/supabase-js`; фасад `src/data/api.js` переключает его и Mock-режим (localStorage, эмуляция сети) по наличию `.env`
 
 ## Запуск
@@ -34,10 +34,16 @@ npm run preview
 
 Схема БД, RLS-политики, REST API, обработка ошибок и проверка безопасности — в [`backend_documentation.md`](backend_documentation.md). Откат миграций и пробы RLS «чужое не читается» — в [`supabase/README.md`](supabase/README.md).
 
+## CI/CD и интеграции (ДЗ6)
+
+Пуш в GitHub запускает конвейер **lint → test → build**; коммит в `main` деплоится на **Vercel** (сборка Vite + serverless-функция `GET /api/health`). Интеграции: вход через **Google (OAuth2 силами Supabase)**, аналитика **GA4 / Яндекс.Метрика** (события `screen_view`, `habit_created`, `habit_toggled`, `habit_archived` — включаются env-переменными, без них трекинга нет), мониторинг `/api/health` (200 `ok` / 503 `degraded`, UptimeRobot) и структурированный JSON-логгер с уровнями (`VITE_LOG_LEVEL`).
+
+Пошаговые инструкции — в [`integration_documentation.md`](integration_documentation.md): схема CI/CD (Mermaid), секреты GitHub, подключение Vercel и env-переменные, настройка Google OAuth2, аналитика, мониторинг и промпты для AI-анализа логов. Аудит безопасности — в [`security_audit.md`](security_audit.md).
+
 ## Тесты
 
 ```bash
-npm test           # однократный прогон (121 тест, 8 файлов)
+npm test           # однократный прогон (170 тестов, 12 файлов)
 npm run test:watch # режим наблюдения
 ```
 

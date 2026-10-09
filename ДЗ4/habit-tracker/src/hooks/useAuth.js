@@ -37,9 +37,10 @@ export default function useAuth() {
   const [loading, setLoading] = useState(cloudEnabled);
 
   useEffect(() => {
+    // Mock-режим: сессии не бывает — выходим сразу. Начальные значения
+    // состояния уже правильные (session = null, loading = cloudEnabled),
+    // поэтому синхронные сбросы setState здесь не нужны.
     if (!cloudEnabled) {
-      setSession(null);
-      setLoading(false);
       return undefined;
     }
     let alive = true;

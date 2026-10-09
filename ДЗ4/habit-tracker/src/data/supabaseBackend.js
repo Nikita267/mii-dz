@@ -514,6 +514,28 @@ export async function signIn(email, password) {
 }
 
 /**
+ * Запускает вход через внешнего OAuth2-провайдера (ДЗ6): весь flow ведёт
+ * Supabase — браузер уходит на страницу провайдера и возвращается по
+ * redirectTo, а сессию после возврата подхватывает detectSessionInUrl.
+ * Отдельный бэкенд не нужен. Провайдер должен быть заранее включён в
+ * проекте Supabase: Authentication → Providers → Google.
+ * @param {string} provider код провайдера ('google').
+ * @returns {Promise<void>} при успехе страница уходит на редирект провайдера.
+ * @throws {Error} 'NETWORK' при сбое сети; иначе ошибка с текстом Supabase
+ *   (например, «Unsupported provider» — провайдер не включён в проекте).
+ */
+export async function signInWithOAuth(provider = 'google') {
+  const client = requireClient();
+  const { error } = await client.auth.signInWithOAuth({
+    provider,
+    options: { redirectTo: window.location.origin },
+  });
+  if (error) {
+    throw mapAuthError(error);
+  }
+}
+
+/**
  * Завершает сессию текущего пользователя.
  * @returns {Promise<void>}
  * @throws {Error} 'NETWORK' при сбое сети; иначе ошибка с текстом Supabase.

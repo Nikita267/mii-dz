@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { trackEvent } from '../analytics/index.js';
 import { fetchCheckIns, fetchHabits, toggleCheckIn } from '../data/api.js';
+import { logError, logWarning } from '../utils/logger.js';
 
 /*
  * useHabitsData — данные экрана «Сегодня»: параллельная загрузка привычек
@@ -119,7 +121,7 @@ export default function useHabitsData() {
       if (requestIdRef.current !== requestId) {
         return;
       }
-      console.error('useHabitsData: загрузка не удалась', loadError);
+      logError('habits_load_failed', { error: String(loadError) });
       setError(LOAD_ERROR_MESSAGE);
     } finally {
       if (requestIdRef.current === requestId) {
@@ -129,7 +131,10 @@ export default function useHabitsData() {
   }, []);
 
   useEffect(() => {
-    load();
+    // Первая загрузка — микрозадачей: react-hooks/set-state-in-effect запрещает
+    // синхронные setState из тела эффекта, а на монтировании синхронные вызовы
+    // внутри load и так no-op (loading уже true, error уже null).
+    Promise.resolve().then(load);
   }, [load]);
 
   const toggle = useCallback(
@@ -142,6 +147,7 @@ export default function useHabitsData() {
       setCheckIns((prev) => withDone(prev, habitId, localToday, !wasDone));
       try {
         const { done } = await toggleCheckIn(habitId, localToday);
+        trackEvent('habit_toggled', { done });
         if (done === wasDone) {
           // Ответ разошёлся с прогнозом (данные менялись вне экрана) —
           // доверяем серверу и приводим отметку к его результату.
@@ -149,7 +155,7 @@ export default function useHabitsData() {
         }
         return done;
       } catch (toggleError) {
-        console.error('useHabitsData: отметка не сохранена', toggleError);
+        logWarning('checkin_reverted', { habitId, date: localToday, error: String(toggleError) });
         // Хирургический откат одной отметки: соседние оптимистичные
         // изменения (другая карточка в этот момент) не затираются.
         setCheckIns((prev) => withDone(prev, habitId, localToday, wasDone));

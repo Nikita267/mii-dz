@@ -596,6 +596,19 @@ export async function signIn(email, password) {
 }
 
 /**
+ * Запускает OAuth2-вход через провайдера (ДЗ6): редирект на страницу
+ * провайдера и обратно — зона ответственности Supabase, готовую сессию
+ * UI получит через onAuthChange. Метод нужен только в cloud-режиме.
+ * @param {string} provider код провайдера ('google').
+ * @returns {Promise<void>} при успехе страница уходит на редирект.
+ * @throws {Error} 'AUTH_UNSUPPORTED' в Mock-режиме; 'NETWORK' при сбое сети.
+ */
+export async function signInWithOAuth(provider = 'google') {
+  if (!isCloudEnabled()) throw new Error('AUTH_UNSUPPORTED');
+  return (await loadCloudBackend()).signInWithOAuth(provider);
+}
+
+/**
  * Завершает сессию текущего пользователя (FR-66). Локальные Mock-данные
  * не трогает — их судьбу решает UI (FR-65/FR-67).
  * @returns {Promise<void>}
