@@ -53,8 +53,10 @@ function misconfiguredCheck() {
 /**
  * GET /api/health — здоровье зависимостей приложения.
  *
- * Параллельно проверяет БД (GET {SUPABASE_URL}/rest/v1/ с заголовком apikey)
- * и Auth (GET {SUPABASE_URL}/auth/v1/health), отвечает JSON-объектом
+ * Параллельно проверяет БД (GET /rest/v1/habits?select=id&limit=1 с apikey:
+ * под anon-ключом RLS возвращает 200 с пустым списком — корень /rest/v1/
+ * стабильно отвечает 401 и для здоровья не годится) и Auth
+ * (GET /auth/v1/health с тем же apikey), отвечает JSON-объектом
  * { status: 'ok'|'degraded', checks: { db, auth }, latencyMs, uptime,
  * timestamp }: все проверки прошли — HTTP 200, хотя бы одна нет (в том числе
  * из-за отсутствия env) — HTTP 503. Ответ помечен Cache-Control: no-store,
@@ -79,8 +81,10 @@ export default async function handler(req, res) {
   const [db, auth] =
     SUPABASE_URL && SUPABASE_ANON_KEY
       ? await Promise.all([
-          probeService(`${SUPABASE_URL}/rest/v1/`, { apikey: SUPABASE_ANON_KEY }),
-          probeService(`${SUPABASE_URL}/auth/v1/health`),
+          probeService(`${SUPABASE_URL}/rest/v1/habits?select=id&limit=1`, {
+            apikey: SUPABASE_ANON_KEY,
+          }),
+          probeService(`${SUPABASE_URL}/auth/v1/health`, { apikey: SUPABASE_ANON_KEY }),
         ])
       : [misconfiguredCheck(), misconfiguredCheck()];
 
