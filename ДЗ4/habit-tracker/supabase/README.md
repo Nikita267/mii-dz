@@ -12,8 +12,9 @@ service-ролей в файлах нет: клиент работает под 
 | `migrations/0001_init.sql` | Таблицы `habits` и `check_ins`, ограничения, PK, каскады, индексы |
 | `migrations/0002_rls_policies.sql` | RLS и 8 именованных политик «только своё» |
 | `migrations/0003_checkin_habit_ownership.sql` | Усиление insert/update-политик `check_ins`: отметка — только на свою привычку |
+| `migrations/0004_checkin_moscow_date.sql` | Фикс CHECK «не будущее»: порог «сегодня» в Europe/Moscow, а не в UTC (ночные отметки 00:00–03:00 МСК) |
 
-Все три миграции идемпотентны — повторный запуск не падает и не дублирует объекты.
+Все миграции идемпотентны — повторный запуск не падает и не дублирует объекты.
 
 ## Маппинг к модели фронтенда (`src/data/api.js`)
 
@@ -26,7 +27,7 @@ service-ролей в файлах нет: клиент работает под 
 | `Habit.createdAt` | `habits.created_at` | date, `current_date` |
 | `Habit.archivedAt` | `habits.archived_at` | date или null |
 | `CheckIn.habitId` | `check_ins.habit_id` | uuid, FK → habits |
-| `CheckIn.date` | `check_ins.date` | date, ≤ сегодня |
+| `CheckIn.date` | `check_ins.date` | date, ≤ сегодня (Europe/Moscow, миграция 0004) |
 | — | `*.user_id` | uuid, сервер: `default auth.uid()` — клиент не передаёт |
 | — | `check_ins.created_at` | timestamptz, `now()` — техническое поле |
 
@@ -41,9 +42,11 @@ service-ролей в файлах нет: клиент работает под 
 2. Вставить целиком содержимое `migrations/0001_init.sql` → **Run**.
 3. Создать новый запрос, вставить `migrations/0002_rls_policies.sql` → **Run**.
 4. Новым запросом применить `migrations/0003_checkin_habit_ownership.sql` → **Run**.
+5. Новым запросом применить `migrations/0004_checkin_moscow_date.sql` → **Run**.
 
-Порядок обязателен: 0002 ссылается на таблицы 0001, а 0003 заменяет
-insert/update-политики `check_ins` из 0002 усиленными версиями.
+Порядок обязателен: 0002 ссылается на таблицы 0001, 0003 заменяет
+insert/update-политики `check_ins` из 0002 усиленными версиями, 0004
+заменяет CHECK-ограничение даты из 0001.
 
 ### Способ 2 — Supabase CLI
 
@@ -179,6 +182,13 @@ values ('<id-своей-привычки>', current_date);
 В SQL Editor, в обратном порядке:
 
 ```sql
+-- вниз по 0004: вернуть UTC-порог «сегодня» (вернётся баг ночного окна
+-- 00:00–03:00 МСК)
+alter table public.check_ins
+  drop constraint if exists check_ins_date_not_future;
+alter table public.check_ins
+  add constraint check_ins_date_not_future check (date <= current_date);
+
 -- вниз по 0003: усиленные политики носят те же имена, что в 0002, —
 -- отдельного отката нет, их убирает откат 0002 ниже
 
