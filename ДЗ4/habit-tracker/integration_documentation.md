@@ -89,6 +89,22 @@ Project Settings → **Environment Variables**. Значения те же, чт
    аккаунт работает; `https://<домен>/api/health` возвращает HTTP 200
    (`"status":"ok"`).
 
+### 1.6. Инцидент деплоя: удвоенный путь (решено)
+
+Первый запуск джобы `deploy` упал с ошибкой:
+
+```text
+Error: The provided path "~/work/mii-dz/mii-dz/ДЗ4/habit-tracker/ДЗ4/habit-tracker"
+does not exist
+```
+
+Причина: CI выполнял `cd ДЗ4/habit-tracker && vercel deploy`, а в настройках
+проекта Vercel уже задан **Root Directory** = `ДЗ4/habit-tracker` — CLI добавил
+его к текущему каталогу ещё раз, и путь удвоился. Фикс (коммит `be4babf`):
+`vercel deploy --prod --yes` запускается из корня репозитория, подкаталог
+подставляет сам Vercel. Урок: если Root Directory задан в настройках проекта,
+не дублировать его в CI.
+
 ---
 
 ## 2. OAuth2: вход через Google
@@ -101,11 +117,13 @@ Flow целиком ведёт Supabase: приложение только за�
 
 1. [console.cloud.google.com](https://console.cloud.google.com) → создать или
    выбрать проект.
-2. **APIs & Services → OAuth consent screen**: тип External, имя приложения
-   («Трекер привычек»), добавить себя в Test users (для учебного проекта хватит
-   тестового режима).
-3. **APIs & Services → Credentials → Create Credentials → OAuth client ID** →
-   тип **Web application**.
+2. **Google Auth Platform → Branding** (в старой консоли: APIs & Services →
+   OAuth consent screen): имя приложения («Трекер привычек»), user support
+   email; в **Audience** — User Type External и свой аккаунт в Test users
+   (учебному проекту хватает тестового режима, публикация не нужна).
+3. **Google Auth Platform → Clients → Create Client** (старый путь:
+   Credentials → Create Credentials → OAuth client ID) → тип **Web
+   application**.
 4. **Authorized JavaScript origins**:
    `https://<project-ref>.supabase.co` — `<project-ref>` берётся из URL проекта
    Supabase (Settings → API).
@@ -141,6 +159,10 @@ Flow целиком ведёт Supabase: приложение только за�
 - Ошибка `Unsupported provider` — провайдер не включён в Supabase (п. 2.2.1).
 - Ошибка `redirect_uri_mismatch` в Google — URI в Google Cloud не совпадают
   посимвольно с п. 2.1.4–2.1.5.
+- Ошибка `403: access_denied` — аккаунт не добавлен в Test users (аудитория
+  приложения в тестовом режиме).
+- Проверено 10.10.2026: вход через Google на продакшн-URL прошёл успешно
+  (экран «приложение не проверено» → Продолжить — норма тестового режима).
 
 ---
 
@@ -166,7 +188,11 @@ Flow целиком ведёт Supabase: приложение только за�
 1. Локально: вписать ID в `.env` (см. `.env.example`):
    `VITE_GA_MEASUREMENT_ID` и/или `VITE_YM_COUNTER_ID`.
 2. Продакшн: те же переменные добавить в Vercel — Project Settings →
-   Environment Variables — и сделать Redeploy (env вшивается при сборке).
+   Environment Variables — и сделать новый деплой (env вшивается при сборке;
+   кнопка Redeploy может переиспользовать кэш — надёжнее пуш в `main`).
+
+В этом проекте включена **Яндекс.Метрика**: счётчик № 113599598, переменная
+`VITE_YM_COUNTER_ID` задана в Vercel (Production). GA4 не подключён.
 
 ### 3.3. События
 
@@ -205,8 +231,9 @@ Flow целиком ведёт Supabase: приложение только за�
 ### 4.2. Что означает `degraded`
 
 Health-check отвечает `503 {"status":"degraded"}`, когда хотя бы одна из
-проверок — БД (`GET /rest/v1/`) или Auth (`GET /auth/v1/health`) — не ответила
-2xx за 5 секунд, либо не заданы серверные `SUPABASE_URL`/`SUPABASE_ANON_KEY`.
+проверок — БД (`GET /rest/v1/habits?select=id&limit=1`) или Auth
+(`GET /auth/v1/health`) — не ответила 2xx за 5 секунд, либо не заданы серверные
+`SUPABASE_URL`/`SUPABASE_ANON_KEY`.
 Сам Vercel при этом жив: недоступна зависимость (Supabase) или конфигурация.
 UptimeRobot видит 503 как сбой и шлёт алерт — это сигнал смотреть Vercel
 Functions Logs и [status.supabase.com](https://status.supabase.com).
@@ -275,10 +302,11 @@ Functions Logs и [status.supabase.com](https://status.supabase.com).
 
 Маршрут **`GET /api/health`** — Vercel Serverless Function `api/health.js`.
 
-Что делает: параллельно пингует обе зависимости Supabase — БД
-(`GET {SUPABASE_URL}/rest/v1/` с заголовком `apikey`) и Auth
-(`GET {SUPABASE_URL}/auth/v1/health`) — с таймаутом 5 c на каждую, замеряет
-латентность и отвечает JSON.
+Что делает: параллельно пингует обе зависимости Supabase с заголовком
+`apikey` — БД (`GET {SUPABASE_URL}/rest/v1/habits?select=id&limit=1`; корень
+`/rest/v1/` всегда отвечает 401 и для здоровья не годится, а список привычек
+под anon-ключом с RLS даёт 200) и Auth (`GET {SUPABASE_URL}/auth/v1/health`)
+— с таймаутом 5 c на каждую, замеряет латентность и отвечает JSON.
 
 **HTTP 200 — всё живо:**
 
