@@ -74,7 +74,9 @@ jobs:
 
       - name: Деплой (vercel deploy --prod)
         if: ${{ env.VERCEL_TOKEN != '' }}
-        run: cd "ДЗ4/habit-tracker" && vercel deploy --prod --yes
+        # Из корня репозитория: Root Directory (ДЗ4/habit-tracker) уже задан
+        # в настройках Vercel-проекта — cd в подкаталог удваивал путь.
+        run: vercel deploy --prod --yes
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
