@@ -8,15 +8,18 @@
 
 | Что | Где |
 |---|---|
-| Приложение | <https://mii-dz.vercel.app> |
-| Health-check | <https://mii-dz.vercel.app/api/health> — `200 {"status":"ok"}` |
+| Приложение | <https://podgorerulit.ru> — основной адрес, доступен из РФ без VPN |
+| Зеркало | <https://mii-dz.vercel.app> (в РФ блокируется нестабильно) |
+| Health-check | <https://podgorerulit.ru/api/health> — `200 {"status":"ok"}` |
 | Вход | email+пароль и OAuth2 Google (Supabase Auth) |
 | Аналитика | Яндекс.Метрика, счётчик № 113599598 |
-| Мониторинг | UptimeRobot: Keyword `"status":"ok"` на `/api/health`, раз в 5 минут |
+| Мониторинг | UptimeRobot: Keyword `"status":"ok"` на `/api/health` (оба адреса), раз в 5 минут |
 | CI/CD | GitHub Actions: lint → 170 тестов → build → деплой Vercel при push в `main` |
 
-Примечание: домен `*.vercel.app` в РФ блокируется нестабильно (блокировка
-РКН «мигрирует» между подсетями) — при недоступности открыть через VPN.
+Собственный домен `podgorerulit.ru` (регистратор RU-CENTER, DNS — AdminVPS)
+A-записью указывает на `76.76.21.21` — anycast-адрес Vercel для кастомных
+доменов, не попадающий под блокировку РКН подсетей `*.vercel.app`;
+SSL-сертификат Let's Encrypt выпускается и продлевается Vercel автоматически.
 
 ## Структура репозитория
 
