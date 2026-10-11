@@ -12,7 +12,7 @@
 | Зеркало | <https://mii-dz.vercel.app> (в РФ блокируется нестабильно) |
 | Health-check | <https://podgorerulit.ru/api/health> — `200 {"status":"ok"}` |
 | Вход | email+пароль и OAuth2 Google (Supabase Auth) |
-| Аналитика | Яндекс.Метрика, счётчик № 113599598 |
+| Аналитика | Яндекс.Метрика, счётчик № 113601104 |
 | Мониторинг | UptimeRobot: Keyword `"status":"ok"` на `/api/health` (оба адреса), раз в 5 минут |
 | CI/CD | GitHub Actions: lint → 170 тестов → build → деплой Vercel при push в `main` |
 
